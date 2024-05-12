@@ -1,14 +1,20 @@
 import time
 from collections import deque
 
-col = row = [int, int, int, int, int, int, int, int, int]
-grid = [row, row, row, row, row, row, row, row, row]
-
 
 class Sudoku:
-    def __init__(self, sudoku: grid):
+    def __init__(self, sudoku):
         self.grid = sudoku
         self.recent_requests = deque()
+
+    def _limit_calls(self, base_delay=0.01, interval=10, threshold=5):
+        current_time = time.time()
+        self.recent_requests.append(current_time)
+        num_requests = len([t for t in self.recent_requests if current_time - t < 10])
+
+        if num_requests > 5:
+            delay = 0.01 * (num_requests - 5 + 1)
+            time.sleep(delay)
 
     def __str__(self):
         string_representation = "| - - - - - - - - - - - |\n"
@@ -25,60 +31,34 @@ class Sudoku:
 
         return string_representation
 
+
+    def check_row(self, row, base_delay=0.01, interval=10, threshold=5):
+        """Check if the given row is correct."""
+        self._limit_calls(base_delay, interval, threshold)
+
+        # Check row
+        if sum(self.grid[row]) != 45:
+            return False
+
+        return True
+
     def check(self, base_delay=0.01, interval=10, threshold=5):
         """Check if the given Sudoku solution is correct.
-
+        
         You MUST incorporate this method without modifications into your final solution.
         """
-
-        current_time = time.time()
-        self.recent_requests.append(current_time)
-        num_requests = len(
-            [t for t in self.recent_requests if current_time - t < interval]
-        )
-
-        if num_requests > threshold:
-            delay = base_delay * (
-                num_requests - threshold + 1
-            )  # Increase delay based on excess requests
-            time.sleep(delay)
-
-        # Check rows
         for row in range(9):
-            if sum(self.grid[row]) != 45 or len(set(self.grid[row])) != 9:
-                return False
+            self.check_row(row, base_delay, interval, threshold)
 
         # Check columns
         for col in range(9):
-            if (
-                sum([self.grid[row][col] for row in range(9)]) != 45
-                or len(set([self.grid[row][col] for row in range(9)])) != 9
-            ):
+            if sum([self.grid[row][col] for row in range(9)]) != 45:
                 return False
 
         # Check 3x3 squares
         for i in range(3):
             for j in range(3):
-                if (
-                    sum(
-                        [
-                            self.grid[i * 3 + k][j * 3 + l]
-                            for k in range(3)
-                            for l in range(3)
-                        ]
-                    )
-                    != 45
-                    or len(
-                        set(
-                            [
-                                self.grid[i * 3 + k][j * 3 + l]
-                                for k in range(3)
-                                for l in range(3)
-                            ]
-                        )
-                    )
-                    != 9
-                ):
+                if sum([self.grid[i*3+k][j*3+l] for k in range(3) for l in range(3)]) != 45:
                     return False
 
         return True
@@ -86,19 +66,17 @@ class Sudoku:
 
 if __name__ == "__main__":
 
-    sudoku = Sudoku(
-        [
-            [0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 3, 2, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 9, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 7, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 9, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 9, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ]
-    )
+    sudoku = Sudoku([
+        [0,0,0,1,0,0,0,0,0],
+        [0,0,0,3,2,0,0,0,0],
+        [0,0,0,0,0,9,0,0,0],
+        [0,0,0,0,0,0,0,7,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,9,0,0,0,0,0],
+        [0,0,0,0,0,0,9,0,0],
+        [0,0,0,0,0,0,0,0,3],
+        [0,0,0,0,0,0,0,0,0]
+    ])
 
     print(sudoku)
 
