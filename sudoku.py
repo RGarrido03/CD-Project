@@ -31,6 +31,14 @@ class Sudoku:
 
         return string_representation
 
+    def update_row(self, row, values):
+        """Update the values of the given row."""
+        self.grid[row] = values
+    
+    def update_column(self, col, values):
+        """Update the values of the given column."""
+        for row in range(9):
+            self.grid[row][col] = values[row]
 
     def check_row(self, row, base_delay=0.01, interval=10, threshold=5):
         """Check if the given row is correct."""
@@ -38,6 +46,26 @@ class Sudoku:
 
         # Check row
         if sum(self.grid[row]) != 45:
+            return False
+
+        return True
+
+    def check_column(self, col, base_delay=0.01, interval=10, threshold=5):
+        """Check if the given row is correct."""
+        self._limit_calls(base_delay, interval, threshold)
+
+        # Check col
+        if sum([self.grid[row][col] for row in range(9)]) != 45:
+            return False
+
+        return True
+
+    def check_square(self, row, col, base_delay=0.01, interval=10, threshold=5):
+        """Check if the given 3x3 square is correct."""
+        self._limit_calls(base_delay, interval, threshold)
+
+        # Check square
+        if sum([self.grid[row+i][col+j] for i in range(3) for j in range(3)]) != 45:
             return False
 
         return True
@@ -52,14 +80,12 @@ class Sudoku:
 
         # Check columns
         for col in range(9):
-            if sum([self.grid[row][col] for row in range(9)]) != 45:
-                return False
+            self.check_column(col, base_delay, interval, threshold)
 
         # Check 3x3 squares
         for i in range(3):
             for j in range(3):
-                if sum([self.grid[i*3+k][j*3+l] for k in range(3) for l in range(3)]) != 45:
-                    return False
+                self.check_square(i*3, j*3, base_delay, interval, threshold)
 
         return True
 
