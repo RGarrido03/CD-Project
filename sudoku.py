@@ -1,8 +1,7 @@
 import time
 from collections import deque
 
-row_type = list[int]
-sudoku_type = list[row_type]
+from types import sudoku_type, row_type
 
 
 class Sudoku:

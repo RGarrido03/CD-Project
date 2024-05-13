@@ -2,8 +2,10 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
+from types import address
 
-class S(BaseHTTPRequestHandler):
+
+class SudokuHTTPHandler(BaseHTTPRequestHandler):
     def set_json_header(self):
         self.send_header("Content-type", "application/json")
         self.end_headers()
@@ -73,10 +75,10 @@ class S(BaseHTTPRequestHandler):
         self.send_success(body)
 
 
-def run(server_class=HTTPServer, handler_class=S, port=8080):
+def run_http_server(port: int):
     logging.basicConfig(level=logging.INFO)
-    server_address = ("", port)
-    httpd = server_class(server_address, handler_class)
+    server_address: address = ("", port)
+    httpd = HTTPServer(server_address, SudokuHTTPHandler)
     logging.info("Starting httpd...\n")
     try:
         httpd.serve_forever()
@@ -84,12 +86,3 @@ def run(server_class=HTTPServer, handler_class=S, port=8080):
         pass
     httpd.server_close()
     logging.info("Stopping httpd...\n")
-
-
-if __name__ == "__main__":
-    from sys import argv
-
-    if len(argv) == 2:
-        run(port=int(argv[1]))
-    else:
-        run()
