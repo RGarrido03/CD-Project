@@ -1,4 +1,8 @@
 import argparse
+import threading
+import time
+
+from network import run_http_server
 
 
 def main():
@@ -16,7 +20,9 @@ def main():
     )
     parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=0)
     args = parser.parse_args()
-    print(args.port, args.service, args.address, args.handicap)
+
+    http_thread = threading.Thread(target=run_http_server, args=(args.port,))
+    http_thread.start()
 
 
 if __name__ == "__main__":
