@@ -1,7 +1,7 @@
 import time
 from collections import deque
 
-from types import sudoku_type, row_type
+from custom_types import sudoku_type, row_type
 
 
 class Sudoku:

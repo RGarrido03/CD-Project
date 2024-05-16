@@ -2,7 +2,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
-from types import address
+from custom_types import address
 
 
 class SudokuHTTPHandler(BaseHTTPRequestHandler):
@@ -79,7 +79,7 @@ def run_http_server(port: int):
     logging.basicConfig(level=logging.INFO)
     server_address: address = ("", port)
     httpd = HTTPServer(server_address, SudokuHTTPHandler)
-    logging.info("Starting httpd...\n")
+    logging.info(f"Starting HTTP on port {port}\n")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
