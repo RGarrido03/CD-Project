@@ -1,8 +1,8 @@
 import argparse
 import threading
-import time
 
 from network import run_http_server
+from p2p import run_p2p_server
 
 
 def main():
@@ -23,6 +23,9 @@ def main():
 
     http_thread = threading.Thread(target=run_http_server, args=(args.port,))
     http_thread.start()
+
+    p2p_thread = threading.Thread(target=run_p2p_server, args=(args.service, args.address, args.handicap))
+    p2p_thread.start()
 
 
 if __name__ == "__main__":
