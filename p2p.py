@@ -2,6 +2,7 @@ import selectors
 import socket
 
 from custom_types import Address
+from protocol import P2PProtocol
 
 
 class P2PServer:
@@ -26,15 +27,16 @@ class P2PServer:
         self.children.append(conn)
 
     def read(self, conn: socket.socket):
-        # TODO: Implement read, abstract by using protocol
-        data = conn.recv(1024)
-        if not data:
+        data = P2PProtocol.recv_msg(conn)
+
+        if data is None:
             self.sel.unregister(conn)
             conn.close()
             self.children.remove(conn)
             return
 
         print(data)
+        # TODO: Take actions
 
     def run(self):
         while True:
