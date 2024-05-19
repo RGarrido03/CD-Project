@@ -9,12 +9,12 @@ class P2PServer:
         self.port = port
         self.parent = parent
         self.handicap = handicap
-        self.connections = []
+        self.children: list[socket.socket] = []
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("127.0.0.1", self.port))
         self.socket.setblocking(False)
-        self.socket.listen(5)
+        self.socket.listen(1000)
 
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.socket, selectors.EVENT_READ, self.accept)
@@ -23,7 +23,7 @@ class P2PServer:
         conn, _ = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
-        self.connections.append(conn)
+        self.children.append(conn)
 
     def read(self, conn: socket.socket):
         # TODO: Implement read, abstract by using protocol
@@ -31,7 +31,7 @@ class P2PServer:
         if not data:
             self.sel.unregister(conn)
             conn.close()
-            self.connections.remove(conn)
+            self.children.remove(conn)
             return
 
         print(data)
