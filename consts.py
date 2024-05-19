@@ -9,3 +9,9 @@ class Command(IntEnum):
     SOLVE_REQUEST = 5
     SOLVE_RESPONSE = 6
     NEW_ROLE = 7  # To be confirmed
+
+
+class Role(IntEnum):
+    LINES = 1
+    COLUMNS = 2
+    SQUARES = 3
