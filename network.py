@@ -2,7 +2,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
-from custom_types import address
+from custom_types import Address
 
 
 class SudokuHTTPHandler(BaseHTTPRequestHandler):
@@ -77,7 +77,7 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
 
 def run_http_server(port: int):
     logging.basicConfig(level=logging.INFO)
-    server_address: address = ("", port)
+    server_address: Address = ("", port)
     httpd = HTTPServer(server_address, SudokuHTTPHandler)
     logging.info(f"Starting HTTP on port {port}\n")
     try:
