@@ -3,6 +3,7 @@ import socket
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
+import protocol
 from custom_types import Address
 
 
@@ -20,16 +21,6 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
         self.send_response(404)
         self.set_json_header()
         self.wfile.write(json.dumps({"message": message}).encode("utf-8"))
-
-    def connect_to_adjacent_nodes(self, node_address: str, network_structure: dict[str, list[str]]):
-        adjacent_addresses = network_structure.get(node_address, [])
-        for adj_address in adjacent_addresses:
-            try:
-                conn = socket.create_connection((adj_address.split(':')[0], int(adj_address.split(':')[1])))
-                print(f"Conectado a {adj_address}")
-                conn.close()
-            except socket.error as e:
-                print(f"Erro em {adj_address}: {str(e)}")
 
     def do_GET(self):
         logging.info(
@@ -49,21 +40,20 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
                 }
             )
 
+        # {
+        #     "192.168.1.100:7000": [
+        #         "192.168.1.100:7001",
+        #         "192.168.1.100:7002",
+        #     ],
+        #     "192.168.1.100:7001": ["192.168.1.100:7000"],
+        #     "192.168.1.100:7002": [
+        #         "192.168.1.100:7000",
+        #         "192.168.1.11:7003",
+        #     ],
+        #     "192.168.1.11:7003": ["192.168.1.100:7002"],
+        # }
         elif str(self.path) == "/network":
-            self.send_success(
-                {
-                    "192.168.1.100:7000": [
-                        "192.168.1.100:7001",
-                        "192.168.1.100:7002",
-                    ],
-                    "192.168.1.100:7001": ["192.168.1.100:7000"],
-                    "192.168.1.100:7002": [
-                        "192.168.1.100:7000",
-                        "192.168.1.11:7003",
-                    ],
-                    "192.168.1.11:7003": ["192.168.1.100:7002"],
-                }
-            )
+            self.send_success(self.headers["network"])
 
         elif str(self.path) == "/solve":
             self.set_error("GET method not allowed for /solve")
