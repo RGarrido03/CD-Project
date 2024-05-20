@@ -61,6 +61,7 @@ def test(node_0, node_1, node_2, node_3):
     )
 
     assert response.status_code == 200
+    print(requests.get("http://localhost:8000/network").json())
     assert response.json() == [
         [8, 2, 7, 1, 5, 4, 3, 9, 6],
         [9, 6, 5, 3, 2, 7, 1, 4, 8],

@@ -46,15 +46,15 @@ class P2PServer:
                 callback = key.data
                 callback(key.fileobj)
 
-# falta comunicarem entre si (connect com socket ou algo do genero) e meter o network (implementar os nos a funcionar
-# entre si - connectados. Cada nó vai perguntar aos seus filhos. Parent é aquele que tu connectas e dás endereço na
-# linha de comandos) e status a funcionar.
-def run_p2p_server(port: int, address: Optional[str], handicap: int):
-    if address is not None:
-        for addr in address.split(","):
-            host, port = addr.split(":")
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((host, int(port)))
+    # falta comunicarem entre si (connect com socket ou algo do genero) e meter o network (implementar os nos a
+    # funcionar entre si - connectados. Cada nó vai perguntar aos seus filhos. Parent é aquele que tu connectas e dás
+    # endereço na linha de comandos) e status a funcionar.
+    def run_p2p_server(self, port: int, address: Optional[str], handicap: int):
+        if address is not None:
+            for addr in address.split(","):
+                host, port = addr.split(":")
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((host, int(port)))
 
-    p2p_server = P2PServer(port, address, handicap)
-    p2p_server.run()
+        p2p_server = P2PServer(port, address, handicap)
+        p2p_server.run()

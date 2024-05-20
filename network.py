@@ -1,5 +1,4 @@
 import json
-import socket
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
@@ -24,7 +23,7 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         logging.info(
-            "GET request,\nsolve: %s\nstats:\n%snetwork\n",
+            "GET request,\nsolve: %s\nstats:\n%network\n",
             str(self.path),
             str(self.headers),
         )
@@ -40,20 +39,16 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
                 }
             )
 
-        # {
-        #     "192.168.1.100:7000": [
-        #         "192.168.1.100:7001",
-        #         "192.168.1.100:7002",
-        #     ],
-        #     "192.168.1.100:7001": ["192.168.1.100:7000"],
-        #     "192.168.1.100:7002": [
-        #         "192.168.1.100:7000",
-        #         "192.168.1.11:7003",
-        #     ],
-        #     "192.168.1.11:7003": ["192.168.1.100:7002"],
-        # }
         elif str(self.path) == "/network":
-            self.send_success(self.headers["network"])
+            for node in protocol.nodes:
+                if node.address == self.client_address:
+                    self.send_success(
+                        {
+                            "children": [child.address for child in node.children],
+                            "parent": node.parent.address if node.parent else None,
+                        }
+                    )
+                    return
 
         elif str(self.path) == "/solve":
             self.set_error("GET method not allowed for /solve")

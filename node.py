@@ -3,7 +3,7 @@ import threading
 from typing import Optional
 
 from network import run_http_server
-from p2p import run_p2p_server
+from p2p import P2PServer
 
 
 class Node:
@@ -16,7 +16,7 @@ class Node:
         self.validations = 0
         self.http_thread = threading.Thread(target=run_http_server, args=(http_port,))
         self.p2p_thread = threading.Thread(
-            target=run_p2p_server, args=(p2p_port, address, handicap)
+            target=P2PServer.run_p2p_server, args=(p2p_port, address, handicap)
         )
 
     def run(self):
