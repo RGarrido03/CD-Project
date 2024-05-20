@@ -53,9 +53,8 @@ def run_p2p_server(port: int, address: Optional[str], handicap: int):
     if address is not None:
         for addr in address.split(","):
             host, port = addr.split(":")
-            port = int(port)
-            print(f"Connected to {host}:{port}\n")
-            p2p_server = P2PServer(port, (host, port), handicap)
-            p2p_server.run()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((host, int(port)))
+
     p2p_server = P2PServer(port, address, handicap)
     p2p_server.run()
