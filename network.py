@@ -1,4 +1,5 @@
 import json
+import socket
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
@@ -19,6 +20,16 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
         self.send_response(404)
         self.set_json_header()
         self.wfile.write(json.dumps({"message": message}).encode("utf-8"))
+
+    def connect_to_adjacent_nodes(self, node_address: str, network_structure: dict[str, list[str]]):
+        adjacent_addresses = network_structure.get(node_address, [])
+        for adj_address in adjacent_addresses:
+            try:
+                conn = socket.create_connection((adj_address.split(':')[0], int(adj_address.split(':')[1])))
+                print(f"Conectado a {adj_address}")
+                conn.close()
+            except socket.error as e:
+                print(f"Erro em {adj_address}: {str(e)}")
 
     def do_GET(self):
         logging.info(
