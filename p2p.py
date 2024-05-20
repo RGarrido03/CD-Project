@@ -1,12 +1,13 @@
 import selectors
 import socket
+from typing import Optional
 
 from custom_types import Address
 from protocol import P2PProtocol
 
 
 class P2PServer:
-    def __init__(self, port: int, parent: Address, handicap: int):
+    def __init__(self, port: int, parent: Optional[Address], handicap: int):
         self.port = port
         self.parent = parent
         self.handicap = handicap
@@ -46,8 +47,9 @@ class P2PServer:
                 callback(key.fileobj)
 
 
-def run_p2p_server(port: int, address: str, handicap: int):
-    a = address.split(":")
-    address = (a[0], int(a[1]))
+def run_p2p_server(port: int, address: Optional[str], handicap: int):
+    if address is not None:
+        a = address.split(":")
+        address = (a[0], int(a[1]))
     p2p_server = P2PServer(port, address, handicap)
     p2p_server.run()
