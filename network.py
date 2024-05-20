@@ -72,7 +72,7 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
         )
 
         # TODO: Solve sudoku
-        self.send_success(body)
+        self.send_success(body["sudoku"])
 
 
 def run_http_server(port: int):
