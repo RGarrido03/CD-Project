@@ -29,6 +29,7 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
         )
 
         if str(self.path) == "/stats":
+            # TODO: Get stats
             self.send_success(
                 {
                     "all": {"solved": 2, "validations": 1234567},
@@ -40,6 +41,7 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
             )
 
         elif str(self.path) == "/network":
+            # TODO: Get network
             self.send_success({"children": ""})
 
         elif str(self.path) == "/solve":

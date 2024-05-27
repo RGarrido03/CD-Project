@@ -1,11 +1,13 @@
-import json
 import pickle
 from enum import Enum
 from socket import socket
-from typing import Union, Optional
+from typing import Optional
 
 from consts import Command, Role
 from custom_types import sudoku_type
+
+
+# TODO: Join, work req, work rep, cancel work, keep alive ?
 
 
 class Message:
