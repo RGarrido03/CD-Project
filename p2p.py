@@ -2,16 +2,14 @@ import selectors
 import socket
 from typing import Optional
 
-from custom_types import Address
 from protocol import P2PProtocol
 
 
 class P2PServer:
-    def __init__(self, port: int, parent: Optional[Address], handicap: int):
+    def __init__(self, port: int, parent: Optional[str], handicap: int):
         self.port = port
-        self.parent = parent
         self.handicap = handicap
-        self.children: list[socket.socket] = []
+        self.neighbors: list[socket.socket] = []
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("127.0.0.1", self.port))
@@ -21,11 +19,21 @@ class P2PServer:
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.socket, selectors.EVENT_READ, self.accept)
 
+        if parent is not None:
+            (addr, port) = parent.split(":")
+            self.connect_to_node(addr, int(port))
+
+    def connect_to_node(self, addr: str, port: int):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.neighbors.append(sock)
+        sock.setblocking(False)
+        sock.connect((addr, int(port)))
+
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
-        self.children.append(conn)
+        self.neighbors.append(conn)
 
     def read(self, conn: socket.socket):
         data = P2PProtocol.recv_msg(conn)
@@ -33,7 +41,7 @@ class P2PServer:
         if data is None:
             self.sel.unregister(conn)
             conn.close()
-            self.children.remove(conn)
+            self.neighbors.remove(conn)
             return
 
         print(data)
@@ -46,15 +54,11 @@ class P2PServer:
                 callback = key.data
                 callback(key.fileobj)
 
-    # falta comunicarem entre si (connect com socket ou algo do genero) e meter o network (implementar os nos a
-    # funcionar entre si - connectados. Cada nó vai perguntar aos seus filhos. Parent é aquele que tu connectas e dás
-    # endereço na linha de comandos) e status a funcionar.
-    def run_p2p_server(self, port: int, address: Optional[str], handicap: int):
-        if address is not None:
-            for addr in address.split(","):
-                host, port = addr.split(":")
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((host, int(port)))
 
-        p2p_server = P2PServer(port, address, handicap)
-        p2p_server.run()
+# falta comunicarem entre si (connect com socket ou algo do genero) e meter o network (implementar os nos a
+# funcionar entre si - connectados. Cada nó vai perguntar aos seus filhos. Parent é aquele que tu connectas e dás
+# endereço na linha de comandos) e status a funcionar.
+def run_p2p_server(port: int, address: Optional[str], handicap: int) -> P2PServer:
+    p2p_server = P2PServer(port, address, handicap)
+    yield p2p_server
+    p2p_server.run()
