@@ -9,7 +9,7 @@ class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: int):
         self.port = port
         self.handicap = handicap
-        self.neighbors: list[tuple[socket.socket, int, int]] = []
+        self.neighbors: dict[socket.socket, tuple[int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("127.0.0.1", self.port))
@@ -25,18 +25,26 @@ class P2PServer:
 
     def connect_to_node(self, addr: str, port: int):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.neighbors.append((sock, 0, 0))
+        self.neighbors[sock] = (0, 0)
         sock.setblocking(False)
         sock.connect((addr, int(port)))
 
     def get_all_stats(self) -> tuple[int, int]:
-        return sum([n[1] for n in self.neighbors]), sum([n[2] for n in self.neighbors])
+        return sum([s[0] for (_, s) in self.neighbors.items()]), sum(
+            [s[1] for (_, s) in self.neighbors.items()]
+        )
+
+    def add_stats_to_neighbor(
+        self, conn: socket.socket, stats: tuple[int, int]
+    ) -> None:
+        (all, validations) = self.neighbors[conn]
+        self.neighbors[conn] = (all + stats[0], validations + stats[1])
 
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
-        self.neighbors.append((conn, 0, 0))
+        self.neighbors[conn] = (0, 0)
 
     def read(self, conn: socket.socket):
         data = P2PProtocol.recv_msg(conn)
@@ -44,7 +52,7 @@ class P2PServer:
         if data is None:
             self.sel.unregister(conn)
             conn.close()
-            self.neighbors.remove((conn, 0, 0))
+            del self.neighbors[conn]
             return
 
         print(data)
