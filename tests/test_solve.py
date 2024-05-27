@@ -3,6 +3,7 @@ import threading
 import pytest
 import requests
 
+from gen import generate_sudoku, solve_sudoku
 from node import Node
 
 
@@ -43,36 +44,17 @@ def node_3():
 
 
 def test(node_0, node_1, node_2, node_3):
+    gen_sudoku = generate_sudoku(3)
+
     response = requests.post(
         "http://localhost:8000/solve",
-        json={
-            "sudoku": [
-                [0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 3, 2, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 9, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 7, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 9, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 9, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 3],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ]
-        },
+        json={"sudoku": gen_sudoku.grid},
     )
 
+    solve_sudoku(gen_sudoku.grid)
+
     assert response.status_code == 200
-    print(requests.get("http://localhost:8000/network").json())
-    assert response.json() == [
-        [8, 2, 7, 1, 5, 4, 3, 9, 6],
-        [9, 6, 5, 3, 2, 7, 1, 4, 8],
-        [3, 4, 1, 6, 8, 9, 7, 5, 2],
-        [5, 9, 3, 4, 6, 8, 2, 7, 1],
-        [4, 7, 2, 5, 1, 3, 6, 8, 9],
-        [6, 1, 8, 9, 7, 2, 4, 3, 5],
-        [7, 8, 6, 2, 3, 5, 9, 1, 4],
-        [1, 5, 4, 7, 9, 6, 8, 2, 3],
-        [2, 3, 9, 8, 4, 1, 5, 6, 7],
-    ]
+    assert response.json() == gen_sudoku.grid
 
     assert node_0.validations > 0
     assert node_1.validations > 0
