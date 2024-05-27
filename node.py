@@ -14,9 +14,13 @@ class Node:
         self.handicap = handicap
         self.solved = 0
         self.validations = 0
-        self.http_thread = threading.Thread(target=run_http_server, args=(http_port,))
+        self.http_thread = threading.Thread(
+            target=run_http_server, args=(http_port,), daemon=True
+        )
         self.p2p_thread = threading.Thread(
-            target=P2PServer.run_p2p_server, args=(p2p_port, address, handicap)
+            target=P2PServer.run_p2p_server,
+            args=(p2p_port, address, handicap),
+            daemon=True,
         )
 
     def run(self):

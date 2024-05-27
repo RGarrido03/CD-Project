@@ -40,15 +40,7 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
             )
 
         elif str(self.path) == "/network":
-            for node in protocol.nodes:
-                if node.address == self.client_address:
-                    self.send_success(
-                        {
-                            "children": [child.address for child in node.children],
-                            "parent": node.parent.address if node.parent else None,
-                        }
-                    )
-                    return
+            self.send_success({"children": ""})
 
         elif str(self.path) == "/solve":
             self.set_error("GET method not allowed for /solve")
