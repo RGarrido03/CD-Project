@@ -3,13 +3,27 @@ import socket
 from typing import Optional
 
 from custom_types import Address
-from protocol import P2PProtocol, JoinParent, JoinParentResponse
+from protocol import (
+    P2PProtocol,
+    JoinParent,
+    JoinParentResponse,
+    JoinOther,
+    JoinOtherResponse,
+    KeepAlive,
+    WorkRequest,
+    WorkAck,
+    WorkComplete,
+    WorkCancel,
+    WorkCancelAck,
+)
 
 
 class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: int):
         self.port = port
         self.handicap = handicap
+        self.solved: int = 0
+        self.validations: int = 0
 
         """
         Neighbors is a dictionary with the address (host, port) as the key,
@@ -27,15 +41,15 @@ class P2PServer:
 
         if parent is not None:
             (addr, port) = parent.split(":")
-            self.connect_to_node(addr, int(port))
+            self.connect_to_node((addr, int(port)), parent=True)
 
-    def connect_to_node(self, addr: str, port: int):
+    def connect_to_node(self, addr: Address, parent: bool = False):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.neighbors[(addr, port)] = (sock, 0, 0)
+        self.neighbors[addr] = (sock, 0, 0)
         sock.setblocking(False)
-        sock.connect((addr, int(port)))
+        sock.connect(addr)
 
-        message = JoinParent()
+        message = JoinParent() if parent else JoinOther()
         P2PProtocol.send_msg(sock, message)
 
     def get_all_stats(self) -> tuple[int, int]:
@@ -63,7 +77,46 @@ class P2PServer:
             return
 
         print(data)
-        # TODO: Take actions
+
+        if isinstance(data, JoinParent):
+            neighbors = list(self.neighbors.keys())
+            neighbors.remove(conn.getsockname())
+            message = JoinParentResponse(neighbors)
+            P2PProtocol.send_msg(conn, message)
+        elif isinstance(data, JoinParentResponse):
+            for node in data.nodes:
+                self.connect_to_node(node)
+        elif isinstance(data, JoinOther):
+            message = JoinOtherResponse(self.solved, self.validations)
+            P2PProtocol.send_msg(conn, message)
+        elif isinstance(data, JoinOtherResponse):
+            self.neighbors[conn.getsockname()] = (conn, data.solved, data.validations)
+        elif isinstance(data, KeepAlive):
+            # TODO: Is this needed?
+            pass
+        elif isinstance(data, WorkRequest):
+            # TODO: Implement this
+            message = WorkAck(data.id)
+            P2PProtocol.send_msg(conn, message)
+        elif isinstance(data, WorkAck):
+            # TODO: Implement this. A job data structure is yet to be created.
+            pass
+        elif isinstance(data, WorkComplete):
+            # TODO: Cancel job, if work is being done
+            # TODO: Return solved grid to HTTP interface
+            solved = self.neighbors[conn.getsockname()][1] + 1
+            validations = self.neighbors[conn.getsockname()][2] + data.validations
+            self.neighbors[conn.getsockname()] = (conn, solved, validations)
+        elif isinstance(data, WorkCancel):
+            # TODO: Cancel job, if work is being done
+            # TODO: Send current validations, may need refactor, I'm too tired
+            pass
+        elif isinstance(data, WorkCancelAck):
+            solved = self.neighbors[conn.getsockname()][1]
+            validations = self.neighbors[conn.getsockname()][2] + data.validations
+            self.neighbors[conn.getsockname()] = (conn, solved, validations)
+        else:
+            print("Unsupported message", data)
 
     def run(self):
         while True:
