@@ -51,7 +51,7 @@ class JoinParentResponse(Message):
 
     def __init__(self, nodes: list[Address]):
         super().__init__(Command.JOIN_PARENT_RESPONSE)
-        self.nodes = nodes
+        self.nodes: list[Address] = nodes
 
 
 class JoinOther(Message):
@@ -126,7 +126,8 @@ class WorkAck(Message):
 
 class WorkComplete(Message):
     """
-    The job is complete, so this message will be sent to the node that requested it.
+    The job is complete.
+    This message may be sent to all nodes (or just the one who requested? Let's see)
 
     It includes the number of validations, for updating the stats.
     Only validations are needed, the solved number is implicitly +1.
