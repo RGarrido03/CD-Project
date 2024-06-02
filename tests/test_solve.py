@@ -9,22 +9,38 @@ from node import Node
 
 @pytest.fixture
 def node_0():
-    return Node(8000, 6000, None, 0)
+    node = Node(8000, 7000, None, 0)
+
+    thread = threading.Thread(target=node.run, daemon=True)
+    thread.start()
+    return node
 
 
 @pytest.fixture
 def node_1():
-    return Node(8001, 6001, "127.0.0.1:6000", 0)
+    node = Node(8001, 7001, "127.0.0.1:7000", 0)
+
+    thread = threading.Thread(target=node.run, daemon=True)
+    thread.start()
+    return node
 
 
 @pytest.fixture
 def node_2():
-    return Node(8002, 6002, "127.0.0.1:6000", 0)
+    node = Node(8002, 7002, "127.0.0.1:7000", 0)
+
+    thread = threading.Thread(target=node.run, daemon=True)
+    thread.start()
+    return node
 
 
 @pytest.fixture
 def node_3():
-    return Node(8003, 6003, "127.0.0.1:6002", 0)
+    node = Node(8003, 7003, "127.0.0.1:7002", 0)
+
+    thread = threading.Thread(target=node.run, daemon=True)
+    thread.start()
+    return node
 
 
 def test(node_0, node_1, node_2, node_3):
