@@ -3,31 +3,28 @@ import threading
 from typing import Optional
 
 from network import run_http_server
-from p2p import run_p2p_server
+from p2p import P2PServer
 
 
 # TODO: Cacheeeeeee???????????
 
+
 class Node:
-    def __init__(self, http_port: int, p2p_port, address: Optional[str], handicap: int):
-        self.http_port = http_port
-        self.p2p_port = p2p_port
-        self.address = address
-        self.handicap = handicap
-        self.solved = 0
-        self.validations = 0
-        self.http_thread = threading.Thread(
-            target=run_http_server, args=(http_port,), daemon=True
-        )
-        self.p2p_thread = threading.Thread(
-            target=run_p2p_server,
-            args=(p2p_port, address, handicap),
+    def __init__(
+        self, http_port: int, p2p_port: int, address: Optional[str], handicap: int
+    ):
+        self.p2p = P2PServer(p2p_port, address, handicap)
+        threading.Thread(
+            target=self.p2p.run,
             daemon=True,
+        ).start()
+
+        self.http_thread = threading.Thread(
+            target=run_http_server, args=(http_port, self.p2p), daemon=True
         )
 
     def run(self):
         self.http_thread.start()
-        self.p2p_thread.start()
 
 
 def main():
@@ -46,8 +43,7 @@ def main():
     parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=0)
     args = parser.parse_args()
 
-    node = Node(args.port, args.service, args.address, args.handicap)
-    node.run()
+    Node(args.port, args.service, args.address, args.handicap)
 
 
 if __name__ == "__main__":

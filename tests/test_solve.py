@@ -9,38 +9,22 @@ from node import Node
 
 @pytest.fixture
 def node_0():
-    node = Node(8000, 7000, None, 0)
-
-    thread = threading.Thread(target=node.run, daemon=True)
-    thread.start()
-    return node
+    return Node(8000, 6000, None, 0)
 
 
 @pytest.fixture
 def node_1():
-    node = Node(8001, 7001, "127.0.0.1:7000", 0)
-
-    thread = threading.Thread(target=node.run, daemon=True)
-    thread.start()
-    return node
+    return Node(8001, 6001, "127.0.0.1:6000", 0)
 
 
 @pytest.fixture
 def node_2():
-    node = Node(8002, 7002, "127.0.0.1:7000", 0)
-
-    thread = threading.Thread(target=node.run, daemon=True)
-    thread.start()
-    return node
+    return Node(8002, 6002, "127.0.0.1:6000", 0)
 
 
 @pytest.fixture
 def node_3():
-    node = Node(8003, 7003, "127.0.0.1:7002", 0)
-
-    thread = threading.Thread(target=node.run, daemon=True)
-    thread.start()
-    return node
+    return Node(8003, 6003, "127.0.0.1:6002", 0)
 
 
 def test(node_0, node_1, node_2, node_3):
@@ -56,7 +40,7 @@ def test(node_0, node_1, node_2, node_3):
     assert response.status_code == 200
     assert response.json() == gen_sudoku.grid
 
-    assert node_0.validations > 0
-    assert node_1.validations > 0
-    assert node_2.validations > 0
-    assert node_3.validations > 0
+    assert node_0.p2p.validations > 0
+    assert node_1.p2p.validations > 0
+    assert node_2.p2p.validations > 0
+    assert node_3.p2p.validations > 0

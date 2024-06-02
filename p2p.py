@@ -24,6 +24,7 @@ class P2PServer:
         self.handicap = handicap
         self.solved: int = 0
         self.validations: int = 0
+        self.parent = parent
 
         """
         Neighbors is a dictionary with the address (host, port) as the key,
@@ -38,10 +39,6 @@ class P2PServer:
 
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.socket, selectors.EVENT_READ, self.accept)
-
-        if parent is not None:
-            (addr, port) = parent.split(":")
-            self.connect_to_node((addr, int(port)), parent=True)
 
     def connect_to_node(self, addr: Address, parent: bool = False):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,7 +97,7 @@ class P2PServer:
             # TODO: Implement this. A job data structure is yet to be created.
             pass
         elif isinstance(data, WorkComplete):
-            self.handle_work_complete(conn, data)            
+            self.handle_work_complete(conn, data)
         elif isinstance(data, WorkCancel):
             self.handle_work_cancel(conn, data)
         elif isinstance(data, WorkCancelAck):
@@ -133,14 +130,12 @@ class P2PServer:
         self.neighbors[conn.getsockname()] = (conn, solved, validations)
 
     def run(self):
+        if self.parent is not None:
+            (addr, port) = self.parent.split(":")
+            self.connect_to_node((addr, int(port)), parent=True)
+
         while True:
             events = self.sel.select()
             for key, _ in events:
                 callback = key.data
                 callback(key.fileobj)
-
-
-def run_p2p_server(port: int, address: Optional[str], handicap: int) -> P2PServer:
-    p2p_server = P2PServer(port, address, handicap)
-    yield p2p_server
-    p2p_server.run()
