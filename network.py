@@ -26,23 +26,10 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps({"message": message}).encode("utf-8"))
 
     def do_GET(self):
-        logging.info(
-            "GET request,\nsolve: %s\nstats:\n%network\n",
-            str(self.path),
-            str(self.headers),
-        )
+        logging.info("GET %s, from %s", self.path, self.headers.get("Host"))
 
         if str(self.path) == "/stats":
-            # TODO: Get stats
-            self.send_success(
-                {
-                    "all": {"solved": 2, "validations": 1234567},
-                    "nodes": [
-                        {"address": "127.0.0.1:7000", "validations": 1000000},
-                        {"address": "127.0.0.1:7001", "validations": 234567},
-                    ],
-                }
-            )
+            self.send_success(self.p2p_server.get_stats())
 
         elif str(self.path) == "/network":
             # TODO: Get network

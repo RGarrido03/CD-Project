@@ -1,7 +1,7 @@
 import selectors
 import socket
 import uuid
-from typing import Optional
+from typing import Optional, Any
 from custom_types import Address
 from gen import solve_sudoku
 from utils import subdivide_board
@@ -50,10 +50,16 @@ class P2PServer:
         message = JoinParent() if parent else JoinOther()
         P2PProtocol.send_msg(sock, message)
 
-    def get_all_stats(self) -> tuple[int, int]:
-        return sum([s[1] for (_, s) in self.neighbors.items()]), sum(
-            [s[2] for (_, s) in self.neighbors.items()]
-        )
+    def get_stats(self) -> dict[str, Any]:
+        return {
+            "all": {
+                "solved": sum([s[1] for (_, s) in self.neighbors.items()]),
+                "validations": sum([s[2] for (_, s) in self.neighbors.items()]),
+            },
+            "nodes": [
+                {"address": k, "validations": v[2]} for (k, v) in self.neighbors.items()
+            ],
+        }
 
     def add_stats_to_neighbor(self, conn: Address, stats: tuple[int, int]) -> None:
         (sock, all, validations) = self.neighbors[conn]
