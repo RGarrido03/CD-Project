@@ -35,6 +35,9 @@ class P2PServer:
         sock.setblocking(False)
         sock.connect((addr, int(port)))
 
+        message = JoinParent()
+        P2PProtocol.send_msg(sock, message)
+
     def get_all_stats(self) -> tuple[int, int]:
         return sum([s[0] for (_, s) in self.neighbors.items()]), sum(
             [s[1] for (_, s) in self.neighbors.items()]
