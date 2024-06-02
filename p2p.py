@@ -95,28 +95,42 @@ class P2PServer:
             # TODO: Is this needed?
             pass
         elif isinstance(data, WorkRequest):
-            # TODO: Implement this
-            message = WorkAck(data.id)
-            P2PProtocol.send_msg(conn, message)
+            self.handle_work_request(data)
         elif isinstance(data, WorkAck):
             # TODO: Implement this. A job data structure is yet to be created.
             pass
         elif isinstance(data, WorkComplete):
-            # TODO: Cancel job, if work is being done
-            # TODO: Return solved grid to HTTP interface
-            solved = self.neighbors[conn.getsockname()][1] + 1
-            validations = self.neighbors[conn.getsockname()][2] + data.validations
-            self.neighbors[conn.getsockname()] = (conn, solved, validations)
+            self.handle_work_complete(conn, data)            
         elif isinstance(data, WorkCancel):
-            # TODO: Cancel job, if work is being done
-            # TODO: Send current validations, may need refactor, I'm too tired
-            pass
+            self.handle_work_cancel(conn, data)
         elif isinstance(data, WorkCancelAck):
-            solved = self.neighbors[conn.getsockname()][1]
-            validations = self.neighbors[conn.getsockname()][2] + data.validations
-            self.neighbors[conn.getsockname()] = (conn, solved, validations)
+            self.handle_work_cancel_ack(conn, data)
         else:
             print("Unsupported message", data)
+
+    def handle_work_request(self, data: WorkRequest):
+        print(f"Handling work request: {data.id}")
+        message = WorkAck(data.id)
+        P2PProtocol.send_msg(self.neighbors[data.address][0], message)
+        # Sudoku logic i thimk here
+
+    def handle_work_complete(self, conn: socket.socket, data: WorkComplete):
+        print(f"Work complete for job: {data.id}")
+        solved = self.neighbors[conn.getsockname()][1] + 1
+        validations = self.neighbors[conn.getsockname()][2] + data.validations
+        self.neighbors[conn.getsockname()] = (conn, solved, validations)
+
+    def handle_work_cancel(self, conn: socket.socket, data: WorkCancel):
+        print(f"Work cancelled for job: {data.id}")
+        # cancel the job if work is being done (?)
+        message = WorkCancelAck(data.id, self.validations)
+        P2PProtocol.send_msg(conn, message)
+
+    def handle_work_cancel_ack(self, conn: socket.socket, data: WorkCancelAck):
+        print(f"Work cancel acknowledged for job: {data.id}")
+        solved = self.neighbors[conn.getsockname()][1]
+        validations = self.neighbors[conn.getsockname()][2] + data.validations
+        self.neighbors[conn.getsockname()] = (conn, solved, validations)
 
     def run(self):
         while True:
@@ -126,9 +140,6 @@ class P2PServer:
                 callback(key.fileobj)
 
 
-# falta comunicarem entre si (connect com socket ou algo do genero) e meter o network (implementar os nos a
-# funcionar entre si - connectados. Cada nó vai perguntar aos seus filhos. Parent é aquele que tu connectas e dás
-# endereço na linha de comandos) e status a funcionar.
 def run_p2p_server(port: int, address: Optional[str], handicap: int) -> P2PServer:
     p2p_server = P2PServer(port, address, handicap)
     yield p2p_server
