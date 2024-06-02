@@ -4,7 +4,6 @@ from socket import socket
 from typing import Optional
 
 from consts import Command, Role
-from custom_types import sudoku_type
 
 
 class Message:
@@ -171,6 +170,7 @@ class WorkCancelAck(Message):
     :param validations: Number of validations.
     :type validations: int
     """
+
     def __init__(self, id: str, validations: int):
         super().__init__(Command.WORK_REQUEST)
         self.id = id
