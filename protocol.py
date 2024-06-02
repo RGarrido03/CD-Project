@@ -7,11 +7,13 @@ from consts import Command, Role
 from custom_types import sudoku_type
 
 
-# TODO: Join, work req, work rep, cancel work, keep alive ?
-
-
 class Message:
-    """Message Type."""
+    """
+    Base class for all protocol messages.
+
+    :param command: Message type.
+    :type command: Command
+    """
 
     def __init__(self, command: Command):
         self.command = command
@@ -28,82 +30,154 @@ class Message:
         return self.__str__()
 
 
-class StatsRequest(Message):
+class JoinParent(Message):
+    """
+    When the node is created and a parent is specified,
+    send a request to that parent, to get the list of all nodes in the network.
+    """
+
     def __init__(self):
-        super().__init__(Command.STATS_REQUEST)
+        super().__init__(Command.JOIN_PARENT)
 
 
-class StatsResponse(Message):
-    def __init__(self, data: dict[str, tuple[int, int]]):
-        super().__init__(Command.STATS_RESPONSE)
-        self.data = data
+class JoinParentResponse(Message):
+    """
+    Response to the JoinParent message.
+    It contains the list of all nodes in the network.
+
+    :param nodes: List of all nodes in the network.
+    :type nodes: list[socket]
+    """
+
+    def __init__(self, nodes: list[socket]):
+        super().__init__(Command.JOIN_PARENT_RESPONSE)
+        self.nodes = nodes
 
 
-class NetworkRequest(Message):
+class JoinOther(Message):
+    """
+    After getting the nodes list from the parent (JoinParentResponse message),
+    send this message to each one of them, to get their stats.
+    """
+
     def __init__(self):
-        super().__init__(Command.NETWORK_REQUEST)
+        super().__init__(Command.JOIN_OTHER)
 
 
-class NetworkResponse(Message):
-    def __init__(self, data: dict[str, list[str]]):
-        super().__init__(Command.NETWORK_RESPONSE)
-        self.data = data
+class JoinOtherResponse(Message):
+    """
+    Response to the JoinOther message.
+    It contains the node's stats: solved puzzles and number of validations.
+
+    :param solved: Number of solved puzzles.
+    :type solved: int
+    :param validations: Number of validations.
+    :type validations: int
+    """
+
+    def __init__(self, solved: int, validations: int):
+        super().__init__(Command.JOIN_OTHER_RESPONSE)
+        self.solved = solved
+        self.validations = validations
 
 
-class SolveRequest(Message):
-    def __init__(self, sudoku: sudoku_type, role: Role):
-        super().__init__(Command.SOLVE_REQUEST)
+class KeepAlive(Message):
+    """
+    Ping message.
+    Probably to be used in a scheduled timing.
+    """
+
+    def __init__(self):
+        super().__init__(Command.KEEP_ALIVE)
+
+
+class WorkRequest(Message):
+    """
+    Send a work job to a node.
+    Probably this will have some changes when we define the algorithm.
+
+    :param id: Job UUID.
+    :type id: str
+    :param sudoku: Sudoku grid.
+    :type sudoku: list[list[int]]
+    :param role: Role.
+    :type role: Role
+    """
+
+    def __init__(self, id: str, sudoku: list[list[int]], role: Role):
+        super().__init__(Command.WORK_REQUEST)
+        self.id = id
         self.sudoku = sudoku
         self.role = role
 
 
-class SolveResponse(Message):
-    def __init__(self, sudoku: sudoku_type):
-        super().__init__(Command.SOLVE_RESPONSE)
-        self.sudoku = sudoku
+class WorkAck(Message):
+    """
+    Acknowledge WorkRequest message.
+
+    :param id: Job UUID.
+    :type id: str
+    """
+
+    def __init__(self, id: str):
+        super().__init__(Command.WORK_REQUEST)
+        self.id = id
 
 
-class NewRole(Message):
-    def __init__(self, role: Role):
-        super().__init__(Command.NEW_ROLE)
-        self.role = role
+class WorkComplete(Message):
+    """
+    The job is complete, so this message will be sent to the node that requested it.
+
+    It includes the number of validations, for updating the stats.
+    Only validations are needed, the solved number is implicitly +1.
+
+    :param id: Job UUID.
+    :type id: str
+    :param grid: Solved grid
+    :type grid: list[list[int]]
+    :param validations: Number of validations.
+    :type validations: int
+    """
+
+    def __init__(self, id: str, grid: list[list[int]], validations: int):
+        super().__init__(Command.WORK_REQUEST)
+        self.id = id
+        self.grid = grid
+        self.validations = validations
+
+
+class WorkCancel(Message):
+    """
+    When a sudoku is completed on a node, the other ones don't need to find the solution anymore.
+    This message cancels a job.
+
+    :param id: Job UUID.
+    :type id: str
+    """
+
+    def __init__(self, id: str):
+        super().__init__(Command.WORK_REQUEST)
+        self.id = id
+
+
+class WorkCancelAck(Message):
+    """
+    Acknowledge WorkCancel message.
+    It includes the number of validations, for updating the stats.
+    In this case, the solved number is unchanged, since no solution was found in the node until then.
+
+    :param id: Job UUID.
+    :type id: str
+    :param validations: Number of validations.
+    :type validations: int
+    """
+    def __init__(self, id: str, validations: int):
+        super().__init__(Command.WORK_REQUEST)
+        self.id = id
+        self.validations = validations
 
 
 class P2PProtocol:
-    @classmethod
-    def stats_request(cls) -> StatsRequest:
-        return StatsRequest()
-
-    @classmethod
-    def stats_response(cls, data: dict[str, tuple[int, int]] = None) -> StatsResponse:
-        if data is None:
-            data = {}
-        return StatsResponse(data)
-
-    @classmethod
-    def network_request(cls) -> NetworkRequest:
-        return NetworkRequest()
-
-    @classmethod
-    def network_response(
-        cls, data: dict[str, tuple[int, int]] = None
-    ) -> NetworkResponse:
-        if data is None:
-            data = {}
-        return NetworkResponse(data)
-
-    @classmethod
-    def solve_request(cls, sudoku: sudoku_type, role: Role) -> SolveRequest:
-        return SolveRequest(sudoku, role)
-
-    @classmethod
-    def solve_response(cls, sudoku: sudoku_type) -> SolveResponse:
-        return SolveResponse(sudoku)
-
-    @classmethod
-    def new_role(cls, role: Role) -> NewRole:
-        return NewRole(role)
-
     @classmethod
     def send_msg(
         cls,
