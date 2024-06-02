@@ -74,6 +74,10 @@ class P2PServer:
             for node in all_network
         }
 
+    def solve_sudoku(self, grid: list[list[int]]) -> list[list[int]]:
+        # TODO: Implement this. For now it's a placeholder that returns the incomplete sudoku.
+        return grid
+
     def accept(self, sock: socket.socket):
         conn, addr = sock.accept()
         conn.setblocking(False)

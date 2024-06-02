@@ -51,8 +51,7 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
             body,
         )
 
-        # TODO: Solve sudoku
-        self.send_success(body["sudoku"])
+        self.send_success({"sudoku": self.p2p_server.solve_sudoku(body["sudoku"])})
 
 
 def run_http_server(port: int, p2p_server: P2PServer):
