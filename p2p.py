@@ -1,8 +1,10 @@
 import selectors
 import socket
+import uuid
 from typing import Optional
-
 from custom_types import Address
+from gen import solve_sudoku
+from utils import subdivide_board
 from protocol import (
     P2PProtocol,
     JoinParent,
@@ -16,6 +18,7 @@ from protocol import (
     WorkCancel,
     WorkCancelAck,
 )
+from sudoku import Sudoku
 
 
 class P2PServer:
@@ -25,11 +28,9 @@ class P2PServer:
         self.solved: int = 0
         self.validations: int = 0
         self.parent = parent
+        self.board = [[0] * 9 for _ in range(9)]  # para guardar o tabuleiro 9por9
+        self.jobs = {}  # para guardar os jobs
 
-        """
-        Neighbors is a dictionary with the address (host, port) as the key,
-        and a tuple (socket, all, validations) as the value.
-        """
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -105,21 +106,61 @@ class P2PServer:
         else:
             print("Unsupported message", data)
 
+    def distribute_work(self, board):
+        """Distribute the 3x3 squares to different nodes."""
+        squares = subdivide_board(board)
+        for idx, square in enumerate(squares):
+            work_request_id = str(
+                uuid.uuid4()
+            )  # gerar um id???? foi o grande P que me recomendou
+            message = WorkRequest(
+                work_request_id, square, self.socket.getsockname(), idx
+            )
+            self.jobs[work_request_id] = (square, idx)
+            neighbor_addr = list(self.neighbors.keys())[idx % len(self.neighbors)]
+            P2PProtocol.send_msg(self.neighbors[neighbor_addr][0], message)
+
     def handle_work_request(self, data: WorkRequest):
         print(f"Handling work request: {data.id}")
-        message = WorkAck(data.id)
+        board = [[0] * 9 for _ in range(9)]
+        start_row, start_col = 3 * (data.idx // 3), 3 * (data.idx % 3)
+        for i in range(3):
+            for j in range(3):
+                board[start_row + i][start_col + j] = data.board[i][j]
+
+        sudoku = Sudoku(board)
+        solved = solve_sudoku(sudoku.grid)
+
+        if solved:
+            message = WorkComplete(
+                data.id, board[start_row : start_row + 3], validations=1, idx=data.idx
+            )
+        else:
+            message = WorkCancel(data.id)
+
         P2PProtocol.send_msg(self.neighbors[data.address][0], message)
-        # Sudoku logic i thimk here
 
     def handle_work_complete(self, conn: socket.socket, data: WorkComplete):
         print(f"Work complete for job: {data.id}")
-        solved = self.neighbors[conn.getsockname()][1] + 1
-        validations = self.neighbors[conn.getsockname()][2] + data.validations
-        self.neighbors[conn.getsockname()] = (conn, solved, validations)
+        if data.id in self.jobs:
+            _, idx = self.jobs[data.id]
+            start_row, start_col = 3 * (idx // 3), 3 * (idx % 3)
+            for i in range(3):
+                for j in range(3):
+                    self.board[start_row + i][start_col + j] = data.board[i][j]
+
+            del self.jobs[data.id]  # remove o job da lista de jobs com del :D
+            if len(self.jobs) == 0:
+                print("All jobs are complete.")
+                if Sudoku(self.board).check():
+                    print("Sudoku solved correctly!")
+                else:
+                    print("There was an error in the solution.")
+        else:
+            print(f"Invalid or unknown job ID: {data.id}")
 
     def handle_work_cancel(self, conn: socket.socket, data: WorkCancel):
         print(f"Work cancelled for job: {data.id}")
-        # cancel the job if work is being done (?)
         message = WorkCancelAck(data.id, self.validations)
         P2PProtocol.send_msg(conn, message)
 
