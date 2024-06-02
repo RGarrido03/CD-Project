@@ -120,7 +120,7 @@ class WorkAck(Message):
     """
 
     def __init__(self, id: str):
-        super().__init__(Command.WORK_REQUEST)
+        super().__init__(Command.WORK_ACK)
         self.id = id
 
 
@@ -141,7 +141,7 @@ class WorkComplete(Message):
     """
 
     def __init__(self, id: str, grid: list[list[int]], validations: int):
-        super().__init__(Command.WORK_REQUEST)
+        super().__init__(Command.WORK_COMPLETE)
         self.id = id
         self.grid = grid
         self.validations = validations
@@ -157,7 +157,7 @@ class WorkCancel(Message):
     """
 
     def __init__(self, id: str):
-        super().__init__(Command.WORK_REQUEST)
+        super().__init__(Command.WORK_CANCEL)
         self.id = id
 
 
@@ -174,7 +174,7 @@ class WorkCancelAck(Message):
     """
 
     def __init__(self, id: str, validations: int):
-        super().__init__(Command.WORK_REQUEST)
+        super().__init__(Command.WORK_CANCEL_ACK)
         self.id = id
         self.validations = validations
 
