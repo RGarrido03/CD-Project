@@ -65,6 +65,15 @@ class P2PServer:
         (sock, all, validations) = self.neighbors[conn]
         self.neighbors[conn] = (sock, all + stats[0], validations + stats[1])
 
+    def get_network(self) -> dict[str, list]:
+        all_network = list(self.neighbors.keys()) + [("127.0.0.1", self.port)]
+        return {
+            ":".join(str(prop) for prop in node): [
+                ":".join(str(prop) for prop in i) for i in all_network if i != node
+            ]
+            for node in all_network
+        }
+
     def accept(self, sock: socket.socket):
         conn, addr = sock.accept()
         conn.setblocking(False)

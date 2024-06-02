@@ -32,8 +32,7 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
             self.send_success(self.p2p_server.get_stats())
 
         elif str(self.path) == "/network":
-            # TODO: Get network
-            self.send_success({"children": ""})
+            self.send_success(self.p2p_server.get_network())
 
         elif str(self.path) == "/solve":
             self.set_error("GET method not allowed for /solve")
