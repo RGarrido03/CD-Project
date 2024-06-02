@@ -35,7 +35,6 @@ def main():
         "--address",
         help="P2P network's address",
         type=str,
-        default="127.0.0.1:7000",
     )
     parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=0)
     args = parser.parse_args()
