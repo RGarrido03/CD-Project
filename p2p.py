@@ -2,14 +2,20 @@ import selectors
 import socket
 from typing import Optional
 
-from protocol import P2PProtocol
+from custom_types import Address
+from protocol import P2PProtocol, JoinParent, JoinParentResponse
 
 
 class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: int):
         self.port = port
         self.handicap = handicap
-        self.neighbors: dict[socket.socket, tuple[int, int]] = {}
+
+        """
+        Neighbors is a dictionary with the address (host, port) as the key,
+        and a tuple (socket, all, validations) as the value.
+        """
+        self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("127.0.0.1", self.port))
@@ -25,7 +31,7 @@ class P2PServer:
 
     def connect_to_node(self, addr: str, port: int):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.neighbors[sock] = (0, 0)
+        self.neighbors[(addr, port)] = (sock, 0, 0)
         sock.setblocking(False)
         sock.connect((addr, int(port)))
 
@@ -34,17 +40,15 @@ class P2PServer:
             [s[1] for (_, s) in self.neighbors.items()]
         )
 
-    def add_stats_to_neighbor(
-        self, conn: socket.socket, stats: tuple[int, int]
-    ) -> None:
-        (all, validations) = self.neighbors[conn]
-        self.neighbors[conn] = (all + stats[0], validations + stats[1])
+    def add_stats_to_neighbor(self, conn: Address, stats: tuple[int, int]) -> None:
+        (sock, all, validations) = self.neighbors[conn]
+        self.neighbors[conn] = (sock, all + stats[0], validations + stats[1])
 
     def accept(self, sock: socket.socket):
-        conn, _ = sock.accept()
+        conn, addr = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
-        self.neighbors[conn] = (0, 0)
+        self.neighbors[addr] = (conn, 0, 0)
 
     def read(self, conn: socket.socket):
         data = P2PProtocol.recv_msg(conn)
@@ -52,7 +56,7 @@ class P2PServer:
         if data is None:
             self.sel.unregister(conn)
             conn.close()
-            del self.neighbors[conn]
+            del self.neighbors[conn.getsockname()]
             return
 
         print(data)
