@@ -4,6 +4,7 @@ from socket import socket
 from typing import Optional
 
 from consts import Command, Role
+from custom_types import Address
 
 
 class Message:
@@ -45,10 +46,10 @@ class JoinParentResponse(Message):
     It contains the list of all nodes in the network.
 
     :param nodes: List of all nodes in the network.
-    :type nodes: list[socket]
+    :type nodes: list[Address]
     """
 
-    def __init__(self, nodes: list[socket]):
+    def __init__(self, nodes: list[Address]):
         super().__init__(Command.JOIN_PARENT_RESPONSE)
         self.nodes = nodes
 
