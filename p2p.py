@@ -51,8 +51,8 @@ class P2PServer:
         P2PProtocol.send_msg(sock, message)
 
     def get_all_stats(self) -> tuple[int, int]:
-        return sum([s[0] for (_, s) in self.neighbors.items()]), sum(
-            [s[1] for (_, s) in self.neighbors.items()]
+        return sum([s[1] for (_, s) in self.neighbors.items()]), sum(
+            [s[2] for (_, s) in self.neighbors.items()]
         )
 
     def add_stats_to_neighbor(self, conn: Address, stats: tuple[int, int]) -> None:
