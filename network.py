@@ -57,10 +57,11 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
 def run_http_server(port: int, p2p_server: P2PServer):
     logging.basicConfig(level=logging.INFO)
     server_address: Address = ("", port)
-    httpd = HTTPServer(
-        server_address,
-        lambda *args: SudokuHTTPHandler(p2p_server, *args),
-    )
+
+    def handler(*args) -> SudokuHTTPHandler:
+        return SudokuHTTPHandler(p2p_server, *args)
+
+    httpd = HTTPServer(server_address, handler)
     logging.info(f"Starting HTTP on port {port}\n")
     try:
         httpd.serve_forever()
