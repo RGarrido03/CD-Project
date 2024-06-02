@@ -28,13 +28,11 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         logging.info("GET %s, from %s", self.path, self.headers.get("Host"))
 
-        if str(self.path) == "/stats":
+        if self.path == "/stats":
             self.send_success(self.p2p_server.get_stats())
-
-        elif str(self.path) == "/network":
+        elif self.path == "/network":
             self.send_success(self.p2p_server.get_network())
-
-        elif str(self.path) == "/solve":
+        elif self.path == "/solve":
             self.set_error("GET method not allowed for /solve")
         else:
             self.set_error(f"Path {self.path} not available")
@@ -45,13 +43,18 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
         body = json.loads(post_data.decode("utf-8"))
 
         logging.info(
-            "POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
-            str(self.path),
-            str(self.headers),
+            "POST %s, from %s, with body:\n%s",
+            self.path,
+            self.headers.get("Host"),
             body,
         )
 
-        self.send_success({"sudoku": self.p2p_server.solve_sudoku(body["sudoku"])})
+        if self.path == "/solve":
+            self.send_success({"sudoku": self.p2p_server.solve_sudoku(body["sudoku"])})
+        elif self.path == "/stats" or self.path == "/network":
+            self.set_error(f"GET method not allowed for {self.path}")
+        else:
+            self.set_error(f"Path {self.path} not available")
 
 
 def run_http_server(port: int, p2p_server: P2PServer):
