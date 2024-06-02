@@ -1,17 +1,15 @@
 import json
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 import logging
-from typing import Generator, Any
 
 from custom_types import Address
 from p2p import P2PServer
 
 
-class SudokuHTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, p2p_server: P2PServer, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.p2p_server = p2p_server
+class SudokuHTTPHandler(SimpleHTTPRequestHandler):
+    def __init__(self, p2p_server: P2PServer, *args):
+        self.p2p_server: P2PServer = p2p_server
+        super().__init__(*args)
 
     def set_json_header(self):
         self.send_header("Content-type", "application/json")
@@ -71,16 +69,12 @@ class SudokuHTTPHandler(BaseHTTPRequestHandler):
         self.send_success(body["sudoku"])
 
 
-def run_http_server(
-    port: int, p2p_server: P2PServer
-) -> Generator[HTTPServer, Any, None]:
+def run_http_server(port: int, p2p_server: P2PServer):
     logging.basicConfig(level=logging.INFO)
     server_address: Address = ("", port)
     httpd = HTTPServer(
         server_address,
-        lambda *args, **kwargs: SudokuHTTPHandler(
-            *args, p2p_server=p2p_server, **kwargs
-        ),
+        lambda *args: SudokuHTTPHandler(p2p_server, *args),
     )
     logging.info(f"Starting HTTP on port {port}\n")
     try:
