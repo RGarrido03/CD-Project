@@ -59,7 +59,8 @@ class P2PServer:
                 "validations": sum([s[2] for (_, s) in self.neighbors.items()]),
             },
             "nodes": [
-                {"address": k, "validations": v[2]} for (k, v) in self.neighbors.items()
+                {"address": ":".join(str(prop) for prop in k), "validations": v[2]}
+                for (k, v) in self.neighbors.items()
             ],
         }
 
