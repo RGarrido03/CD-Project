@@ -71,8 +71,8 @@ class P2PServer:
         }
 
     def add_stats_to_neighbor(self, conn: Address, stats: tuple[int, int]) -> None:
-        (sock, all, validations) = self.neighbors[conn]
-        self.neighbors[conn] = (sock, all + stats[0], validations + stats[1])
+        (sock, solved, validations) = self.neighbors[conn]
+        self.neighbors[conn] = (sock, solved + stats[0], validations + stats[1])
 
     def get_network(self) -> dict[str, list]:
         all_network = list(self.neighbors.keys()) + [self.address]
