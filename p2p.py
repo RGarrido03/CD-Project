@@ -4,7 +4,9 @@ import socket
 import uuid
 from datetime import datetime
 from typing import Optional, Any
-from custom_types import Address
+
+from consts import JobStatus
+from custom_types import Address, sudoku_type, jobs_structure
 from gen import solve_sudoku
 from utils import subdivide_board
 from protocol import (
@@ -30,8 +32,10 @@ class P2PServer:
         self.solved: int = 0
         self.validations: int = 0
         self.parent = parent
-        self.board = [[0] * 9 for _ in range(9)]  # para guardar o tabuleiro 9por9
-        self.jobs = {}  # para guardar os jobs
+
+        # sudokus        -> {id: (grid: Sudoku, complete: bool, jobs: jobs_structure)}
+        # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]. List index is the square number.
+        self.sudokus: dict[str, tuple[Sudoku, bool, jobs_structure]] = {}
 
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
