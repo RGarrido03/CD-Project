@@ -141,6 +141,22 @@ class Sudoku:
 
         return True
 
+    def subdivide_board(board):
+        """Divide the board into 3x3 squares."""
+        squares = []
+        for i in range(0, 9, 3):
+            for j in range(0, 9, 3):
+                square = [row[j : j + 3] for row in board[i : i + 3]]
+                squares.append(square)
+        return squares
+
+    def update_square(self, square, idx):
+        """Update the values of the given square."""
+        start_row, start_col = 3 * (idx // 3), 3 * (idx % 3)
+        for i in range(3):
+            for j in range(3):
+                self.grid[start_row + i][start_col + j] = square[i][j]
+
 
 if __name__ == "__main__":
     sudoku = Sudoku(
