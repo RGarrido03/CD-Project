@@ -41,7 +41,7 @@ class P2PServer:
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind(self.address)
+        self.socket.bind(("", self.address[1]))
         self.socket.setblocking(False)
         self.socket.listen(1000)
 
