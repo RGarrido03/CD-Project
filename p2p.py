@@ -1,6 +1,8 @@
+import logging
 import selectors
 import socket
 import uuid
+from datetime import datetime
 from typing import Optional, Any
 from custom_types import Address
 from gen import solve_sudoku
@@ -23,7 +25,7 @@ from sudoku import Sudoku
 
 class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: int):
-        self.port = port
+        self.address = (socket.gethostbyname(socket.gethostname()), port)
         self.handicap = handicap
         self.solved: int = 0
         self.validations: int = 0
@@ -34,7 +36,7 @@ class P2PServer:
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind(("127.0.0.1", self.port))
+        self.socket.bind(("127.0.0.1", self.address[1]))
         self.socket.setblocking(False)
         self.socket.listen(1000)
 
@@ -44,10 +46,10 @@ class P2PServer:
     def connect_to_node(self, addr: Address, parent: bool = False):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.neighbors[addr] = (sock, 0, 0)
-        sock.setblocking(False)
+        # sock.setblocking(False)
         sock.connect(addr)
 
-        message = JoinParent() if parent else JoinOther()
+        message = JoinParent(self.address) if parent else JoinOther(self.address)
         P2PProtocol.send_msg(sock, message)
 
     def get_stats(self) -> dict[str, Any]:
@@ -66,7 +68,7 @@ class P2PServer:
         self.neighbors[conn] = (sock, all + stats[0], validations + stats[1])
 
     def get_network(self) -> dict[str, list]:
-        all_network = list(self.neighbors.keys()) + [("127.0.0.1", self.port)]
+        all_network = list(self.neighbors.keys()) + [self.address]
         return {
             ":".join(str(prop) for prop in node): [
                 ":".join(str(prop) for prop in i) for i in all_network if i != node
@@ -79,10 +81,9 @@ class P2PServer:
         return grid
 
     def accept(self, sock: socket.socket):
-        conn, addr = sock.accept()
+        conn, _ = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
-        self.neighbors[addr] = (conn, 0, 0)
 
     def read(self, conn: socket.socket):
         data = P2PProtocol.recv_msg(conn)
@@ -90,21 +91,28 @@ class P2PServer:
         if data is None:
             self.sel.unregister(conn)
             conn.close()
-            del self.neighbors[conn.getsockname()]
+            self.neighbors = {k: v for (k, v) in self.neighbors.items() if v[0] != conn}
             return
 
-        print(data)
+        logging.info(
+            "Received %s at %s: %s",
+            type(data).__name__,
+            datetime.now().time().replace(microsecond=0).isoformat(),
+            data,
+        )
 
         if isinstance(data, JoinParent):
             neighbors = list(self.neighbors.keys())
-            neighbors.remove(conn.getsockname())
             message = JoinParentResponse(neighbors)
+            self.neighbors[data.address] = (conn, 0, 0)
             P2PProtocol.send_msg(conn, message)
+            logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinParentResponse):
             for node in data.nodes:
                 self.connect_to_node(node)
         elif isinstance(data, JoinOther):
             message = JoinOtherResponse(self.solved, self.validations)
+            self.neighbors[data.address] = (conn, 0, 0)
             P2PProtocol.send_msg(conn, message)
         elif isinstance(data, JoinOtherResponse):
             self.neighbors[conn.getsockname()] = (conn, data.solved, data.validations)

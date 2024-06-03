@@ -36,8 +36,9 @@ class JoinParent(Message):
     send a request to that parent, to get the list of all nodes in the network.
     """
 
-    def __init__(self):
+    def __init__(self, address: Address):
         super().__init__(Command.JOIN_PARENT)
+        self.address = address
 
 
 class JoinParentResponse(Message):
@@ -60,8 +61,9 @@ class JoinOther(Message):
     send this message to each one of them, to get their stats.
     """
 
-    def __init__(self):
+    def __init__(self, address: Address):
         super().__init__(Command.JOIN_OTHER)
+        self.address = address
 
 
 class JoinOtherResponse(Message):
