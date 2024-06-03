@@ -8,7 +8,7 @@ from typing import Optional, Any
 from consts import JobStatus
 from custom_types import Address, sudoku_type, jobs_structure
 from gen import solve_sudoku
-from utils import subdivide_board
+from utils import subdivide_board, AddressUtils
 from protocol import (
     P2PProtocol,
     JoinParent,
@@ -37,6 +37,7 @@ class P2PServer:
         # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]. List index is the square number.
         self.sudokus: dict[str, tuple[Sudoku, bool, jobs_structure]] = {}
 
+        # {node_addr: Address: (socket: socket.socket, solved: int, validations: int)}
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -76,17 +77,17 @@ class P2PServer:
     def get_network(self) -> dict[str, list]:
         all_network = list(self.neighbors.keys()) + [self.address]
         return {
-            ":".join(str(prop) for prop in node): [
-                ":".join(str(prop) for prop in i) for i in all_network if i != node
+            AddressUtils.address_to_str(node): [
+                AddressUtils.address_to_str(i) for i in all_network if i != node
             ]
             for node in all_network
         }
 
     def solve_sudoku(self, grid: sudoku_type) -> sudoku_type:
         # TODO: Cache (both full and per-square)
-        id = str(uuid.uuid4())
+        _id = str(uuid.uuid4())
         sudoku = Sudoku(grid)
-        self.sudokus[id] = (
+        self.sudokus[_id] = (
             sudoku,
             False,
             [(JobStatus.PENDING, None) for _ in range(0, 9)],
@@ -212,8 +213,7 @@ class P2PServer:
 
     def run(self):
         if self.parent is not None:
-            (addr, port) = self.parent.split(":")
-            self.connect_to_node((addr, int(port)), parent=True)
+            self.connect_to_node(AddressUtils.str_to_address(self.parent), parent=True)
 
         while True:
             events = self.sel.select()
