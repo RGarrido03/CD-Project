@@ -50,6 +50,7 @@ class P2PServer:
     def connect_to_node(self, addr: Address, parent: bool = False):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.neighbors[addr] = (sock, 0, 0)
+        # TODO: Timeout
         sock.connect(addr)
         self.sel.register(sock, selectors.EVENT_READ, self.read)
 
@@ -81,9 +82,16 @@ class P2PServer:
             for node in all_network
         }
 
-    def solve_sudoku(self, grid: list[list[int]]) -> list[list[int]]:
-        # TODO: Implement this. For now it's a placeholder that returns the incomplete sudoku.
-        return grid
+    def solve_sudoku(self, grid: sudoku_type) -> sudoku_type:
+        # TODO: Cache (both full and per-square)
+        id = str(uuid.uuid4())
+        sudoku = Sudoku(grid)
+        self.sudokus[id] = (
+            sudoku,
+            False,
+            [(JobStatus.PENDING, None) for _ in range(0, 9)],
+        )
+        return sudoku.grid
 
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
