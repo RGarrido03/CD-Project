@@ -36,7 +36,7 @@ class P2PServer:
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind(("127.0.0.1", self.address[1]))
+        self.socket.bind(self.address)
         self.socket.setblocking(False)
         self.socket.listen(1000)
 
@@ -46,8 +46,8 @@ class P2PServer:
     def connect_to_node(self, addr: Address, parent: bool = False):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.neighbors[addr] = (sock, 0, 0)
-        # sock.setblocking(False)
         sock.connect(addr)
+        self.sel.register(sock, selectors.EVENT_READ, self.read)
 
         message = JoinParent(self.address) if parent else JoinOther(self.address)
         P2PProtocol.send_msg(sock, message)
