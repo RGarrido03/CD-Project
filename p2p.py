@@ -96,8 +96,8 @@ class P2PServer:
             False,
             [(JobStatus.PENDING, None) for _ in range(0, 9)],
         )
-        self.distribute_work(_id)
-        return sudoku.grid
+        newgrid = self.distribute_work(_id)
+        return newgrid
 
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
@@ -160,7 +160,7 @@ class P2PServer:
         while not complete:
             for square in range(9):
                 number_of_nodes = len(self.get_network())
-                time.sleep(0.2)
+                # time.sleep(0.2)
                 if (
                     jobs[square][0] == JobStatus.PENDING
                     and number_of_progress_nodes < number_of_nodes
@@ -175,6 +175,8 @@ class P2PServer:
                         print("Job canceled by node: ", jobs[square][1], " (node down)")
                         break
                     jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
+                    square_values = self.sudokus[sudoku_id][0].return_square(square)
+                    self.sudokus[sudoku_id][0].update_square(square, square_values)
                     print("Job completed by node: ", jobs[square][1])
                     number_of_progress_nodes -= 1
                 elif jobs[square][0] == JobStatus.COMPLETED:
@@ -183,7 +185,8 @@ class P2PServer:
                     if number_of_completed_nodes == 9:
                         complete = True
                         print("Jobs done!")
-                print("jobs: ", jobs)
+                # print("jobs: ", jobs)
+        return self.sudokus[sudoku_id][0].grid
 
     def generatesquare_given_numbers(sudoku_id, square):
         print("Generating square given numbers for square: ", square)
