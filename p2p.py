@@ -24,6 +24,10 @@ from protocol import (
 from sudoku import Sudoku
 
 
+def send_work_request(sudoku_id, node):
+    print("Work request sent to node: ", node)
+
+
 class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: int):
         self.address = (socket.gethostbyname(socket.gethostname()), port)
@@ -149,13 +153,30 @@ class P2PServer:
 
     def distribute_work(self, sudoku_id: str):
         (grid, complete, jobs) = self.sudokus[sudoku_id]
-        print("grid: ", grid)
-        print("complete: ", complete)
-        print("jobs: ", jobs)
         number_of_nodes = len(self.get_network())
-        for node in range(number_of_nodes):
-            jobs[node] = (JobStatus.IN_PROGRESS, self.address)
-        print("jobs: ", jobs)
+        number_of_progress_nodes = 0
+        number_of_completed_nodes = 0
+
+        while not complete:
+            for square in range(9):
+                if (
+                    jobs[square][0] == JobStatus.PENDING
+                    and number_of_progress_nodes < number_of_nodes
+                ):
+                    send_work_request(sudoku_id, square)
+                    number_of_progress_nodes += 1
+                    jobs[square] = (JobStatus.IN_PROGRESS, self.address)
+                elif jobs[square][0] == JobStatus.IN_PROGRESS:
+                    jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
+                    print("Job completed by node: ", jobs[square][1])
+                    number_of_progress_nodes -= 1
+                elif jobs[square][0] == JobStatus.COMPLETED:
+                    jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
+                    number_of_completed_nodes += 1
+                    if number_of_completed_nodes == 9:
+                        complete = True
+                        print("Jobs done!")
+                print("jobs: ", jobs)
 
     def run(self):
         if self.parent is not None:
