@@ -153,6 +153,7 @@ class P2PServer:
             print("Unsupported message", data)
 
     def distribute_work(self, sudoku_id: str):
+        new_grid = ""
         (grid, complete, jobs) = self.sudokus[sudoku_id]
         number_of_progress_nodes = 0
         number_of_completed_nodes = 0
@@ -160,7 +161,7 @@ class P2PServer:
         while not complete:
             for square in range(9):
                 number_of_nodes = len(self.get_network())
-                # time.sleep(0.2)
+                time.sleep(0.2)
                 if (
                     jobs[square][0] == JobStatus.PENDING
                     and number_of_progress_nodes < number_of_nodes
@@ -172,24 +173,25 @@ class P2PServer:
                     if number_of_nodes < number_of_progress_nodes:
                         number_of_progress_nodes -= 1
                         jobs[square] = (JobStatus.PENDING, None)
-                        print("Job canceled by node: ", jobs[square][1], " (node down)")
+                        logging.info(
+                            f"Job canceled by node: {jobs[square][1]} (node down)"
+                        )
                         break
                     jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
                     square_values = self.sudokus[sudoku_id][0].return_square(square)
-                    self.sudokus[sudoku_id][0].update_square(square, square_values)
-                    print("Job completed by node: ", jobs[square][1])
+                    new_grid = self.sudokus[sudoku_id][0].update_square(
+                        square, square_values
+                    )
+                    logging.info(f"Job completed by node: {jobs[square][1]}")
                     number_of_progress_nodes -= 1
                 elif jobs[square][0] == JobStatus.COMPLETED:
                     jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
                     number_of_completed_nodes += 1
                     if number_of_completed_nodes == 9:
                         complete = True
-                        print("Jobs done!")
+                        logging.info("All jobs done")
                 # print("jobs: ", jobs)
-        return self.sudokus[sudoku_id][0].grid
-
-    def generatesquare_given_numbers(sudoku_id, square):
-        print("Generating square given numbers for square: ", square)
+        return new_grid
 
     def run(self):
         if self.parent is not None:

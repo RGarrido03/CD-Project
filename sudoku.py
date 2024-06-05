@@ -1,3 +1,4 @@
+import random
 import time
 from collections import deque
 
@@ -149,11 +150,21 @@ class Sudoku:
         ]
         return extracted_square
 
+    import random
+
     def update_square(self, square: int, new_values: list[list[int]]):
+        new_values = [
+            [
+                random.randint(1, 9) if new_values[i][j] == 0 else new_values[i][j]
+                for j in range(3)
+            ]
+            for i in range(3)
+        ]
         start_row, start_col = (square // 3) * 3, (square % 3) * 3
         for i in range(3):
             for j in range(3):
                 self.grid[start_row + i][start_col + j] = new_values[i][j]
+        return self.grid
 
 
 if __name__ == "__main__":
