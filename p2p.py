@@ -1,6 +1,7 @@
 import logging
 import selectors
 import socket
+import time
 import uuid
 from datetime import datetime
 from typing import Optional, Any
@@ -153,12 +154,13 @@ class P2PServer:
 
     def distribute_work(self, sudoku_id: str):
         (grid, complete, jobs) = self.sudokus[sudoku_id]
-        number_of_nodes = len(self.get_network())
         number_of_progress_nodes = 0
         number_of_completed_nodes = 0
 
         while not complete:
             for square in range(9):
+                number_of_nodes = len(self.get_network())
+                time.sleep(0.2)
                 if (
                     jobs[square][0] == JobStatus.PENDING
                     and number_of_progress_nodes < number_of_nodes
@@ -167,6 +169,11 @@ class P2PServer:
                     number_of_progress_nodes += 1
                     jobs[square] = (JobStatus.IN_PROGRESS, self.address)
                 elif jobs[square][0] == JobStatus.IN_PROGRESS:
+                    if number_of_nodes < number_of_progress_nodes:
+                        number_of_progress_nodes -= 1
+                        jobs[square] = (JobStatus.PENDING, None)
+                        print("Job canceled by node: ", jobs[square][1], " (node down)")
+                        break
                     jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
                     print("Job completed by node: ", jobs[square][1])
                     number_of_progress_nodes -= 1
@@ -177,6 +184,9 @@ class P2PServer:
                         complete = True
                         print("Jobs done!")
                 print("jobs: ", jobs)
+
+    def generatesquare_given_numbers(sudoku_id, square):
+        print("Generating square given numbers for square: ", square)
 
     def run(self):
         if self.parent is not None:
