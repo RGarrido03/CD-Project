@@ -210,9 +210,13 @@ class P2PServer:
         )
 
         self.neighbors[addr] = (self.neighbors[addr][0], data.validations, 0)
+
+        jobs = self.sudokus[data.id][1]
+        jobs[data.job] = (JobStatus.COMPLETED, jobs[data.job][1])
+
         self.sudokus[data.id] = (
             data.sudoku,
-            self.sudokus[data.id][1],
+            jobs,
             self.sudokus[data.id][2],
         )
 
@@ -221,7 +225,8 @@ class P2PServer:
         (grid, jobs, _) = self.sudokus[sudoku_id]
 
         while not self.is_sudoku_completed(sudoku_id):
-            time.sleep(0.2)  # TODO: Remove this
+            time.sleep(0.5)  # TODO: Remove this
+            logging.debug(f"Jobs: {jobs}")
 
             for square in range(9):
                 job = self.sudokus[sudoku_id][1][square]
