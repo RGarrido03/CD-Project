@@ -224,7 +224,6 @@ class P2PServer:
         )
 
     async def distribute_work(self, sudoku_id: str):
-        new_grid = []
         (grid, jobs, _) = self.sudokus[sudoku_id]
 
         while not self.is_sudoku_completed(sudoku_id):
@@ -257,8 +256,8 @@ class P2PServer:
                     )
                     break
 
-        logging.info(f"{sudoku_id} solved: {new_grid}")
-        return new_grid
+        logging.info(f"{sudoku_id} solved: {self.sudokus[sudoku_id][0]}")
+        return self.sudokus[sudoku_id][0].grid
 
     def get_addresses_of_free_nodes(self, sudoku_id: str) -> list[Address]:
         return list(
