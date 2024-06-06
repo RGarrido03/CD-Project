@@ -156,7 +156,7 @@ class Sudoku:
         rows_idx = [i + ((square // 3) * 3) for i in range(3)]
         cols_idx = [i + ((square % 3) * 3) for i in range(3)]
 
-        zeros_number = sum([1 for j in rows_idx for i in cols_idx if grid[i][j] == 0])
+        zeros_number = sum([1 for i in rows_idx for j in cols_idx if grid[i][j] == 0])
 
         if zeros_number == 0:
             return grid, True
