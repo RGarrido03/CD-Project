@@ -87,7 +87,7 @@ class P2PServer:
             for node in all_network
         }
 
-    def solve_sudoku(self, grid: sudoku_type) -> sudoku_type:
+    async def solve_sudoku(self, grid: sudoku_type) -> sudoku_type:
         # TODO: Cache (both full and per-square)
         _id = str(uuid.uuid4())
         sudoku = Sudoku(grid)
@@ -95,9 +95,9 @@ class P2PServer:
             sudoku,
             False,
             [(JobStatus.PENDING, None) for _ in range(0, 9)],
+            self.address,
         )
-        newgrid = self.distribute_work(_id)
-        return newgrid
+        return await self.distribute_work(_id)
 
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
@@ -108,6 +108,10 @@ class P2PServer:
         data = P2PProtocol.recv_msg(conn)
 
         if data is None:
+            address = [k for (k, v) in self.neighbors.items() if v[0] == conn][0]
+            logging.warning(
+                f"Node {AddressUtils.address_to_str(address)} has disconnected"
+            )
             self.sel.unregister(conn)
             conn.close()
             self.neighbors = {k: v for (k, v) in self.neighbors.items() if v[0] != conn}
@@ -152,9 +156,9 @@ class P2PServer:
         else:
             print("Unsupported message", data)
 
-    def distribute_work(self, sudoku_id: str):
+    async def distribute_work(self, sudoku_id: str):
         new_grid = ""
-        (grid, complete, jobs) = self.sudokus[sudoku_id]
+        (grid, complete, jobs, _) = self.sudokus[sudoku_id]
         number_of_progress_nodes = 0
         number_of_completed_nodes = 0
 
@@ -191,6 +195,8 @@ class P2PServer:
                         complete = True
                         logging.info("All jobs done")
                 print("jobs: ", jobs)
+
+        logging.info(f"{sudoku_id} solved: {new_grid}")
         return new_grid
 
     def run(self):

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import logging
@@ -38,6 +39,8 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
             self.set_error(f"Path {self.path} not available")
 
     def do_POST(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         content_length = int(self.headers["Content-Length"])
         post_data = self.rfile.read(content_length)
         body = json.loads(post_data.decode("utf-8"))
@@ -50,7 +53,11 @@ class SudokuHTTPHandler(SimpleHTTPRequestHandler):
         )
 
         if self.path == "/solve":
-            self.send_success({"sudoku": self.p2p_server.solve_sudoku(body["sudoku"])})
+            done = loop.run_until_complete(
+                asyncio.gather(self.p2p_server.solve_sudoku(body["sudoku"]))
+            )
+            loop.close()
+            self.send_success({"sudoku": done[0]})
         elif self.path == "/stats" or self.path == "/network":
             self.set_error(f"GET method not allowed for {self.path}")
         else:
