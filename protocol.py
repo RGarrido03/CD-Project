@@ -161,6 +161,7 @@ class WorkCancel(Message):
     def __init__(self, id: str):
         super().__init__(Command.WORK_CANCEL)
         self.id = id
+        self.job = job
 
 
 class WorkCancelAck(Message):
@@ -178,6 +179,7 @@ class WorkCancelAck(Message):
     def __init__(self, id: str, validations: int):
         super().__init__(Command.WORK_CANCEL_ACK)
         self.id = id
+        self.job = job
         self.validations = validations
 
 
