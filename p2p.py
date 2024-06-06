@@ -158,6 +158,7 @@ class P2PServer:
             print("Unsupported message", data)
 
     def handle_work_request(self, conn: socket.socket, data: WorkRequest):
+        logging.error(f"Starting handle_work_request for {data.job}")
         grid_from_upstream = data.sudoku.grid
         addr = self.get_address_from_socket(conn)
 
@@ -204,8 +205,10 @@ class P2PServer:
                     data.id, self.sudokus[data.id][0], data.job, self.validations
                 ),
             )
+        logging.error(f"Ending handle_work_request for {data.job}")
 
     def handle_work_complete(self, conn: socket.socket, data: WorkComplete):
+        logging.error(f"Starting handle_work_complete for {data.job}")
         addr = self.get_address_from_socket(conn)
 
         logging.info(
@@ -214,14 +217,13 @@ class P2PServer:
 
         self.neighbors[addr] = (self.neighbors[addr][0], data.validations, 0)
 
-        jobs = self.sudokus[data.id][1]
-        jobs[data.job] = (JobStatus.COMPLETED, jobs[data.job][1])
-
-        self.sudokus[data.id] = (
-            data.sudoku,
-            jobs,
-            self.sudokus[data.id][2],
+        self.update_sudoku_with_new_values(data.id, data.sudoku.grid, data.job)
+        self.sudokus[data.id][1][data.job] = (
+            JobStatus.COMPLETED,
+            self.sudokus[data.id][1][data.job][1],
         )
+
+        logging.error(f"Ending handle_work_complete for {data.job}")
 
     async def distribute_work(self, sudoku_id: str):
         (grid, jobs, _) = self.sudokus[sudoku_id]
@@ -281,6 +283,16 @@ class P2PServer:
 
     def is_sudoku_completed(self, id: str):
         return all([job[0] == JobStatus.COMPLETED for job in self.sudokus[id][1]])
+
+    def update_sudoku_with_new_values(
+        self, sudoku_id: str, new_grid: sudoku_type, job: int
+    ):
+        rows_idx = [i + ((job // 3) * 3) for i in range(3)]
+        cols_idx = [i + ((job % 3) * 3) for i in range(3)]
+
+        for row in rows_idx:
+            for col in cols_idx:
+                self.sudokus[sudoku_id][0].grid[row][col] = new_grid[row][col]
 
     def run(self):
         if self.parent is not None:

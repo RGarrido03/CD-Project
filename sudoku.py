@@ -188,7 +188,7 @@ class Sudoku:
                             and new_value not in cls.return_square(square, grid)
                         ):
                             grid[i][j] = new_value
-                            logging.info(f"Updated with {new_value} in grid {grid}")
+                            logging.info(f"Updated ({i}, {j}) with {new_value}")
                             return grid, zeros_number == 1
 
 
