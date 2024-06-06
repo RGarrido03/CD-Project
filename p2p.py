@@ -1,6 +1,7 @@
 import logging
 import selectors
 import socket
+import threading
 import time
 import uuid
 from datetime import datetime
@@ -24,22 +25,20 @@ from protocol import (
 )
 from sudoku import Sudoku
 
-
-def send_work_request(sudoku_id, node):
-    print("Work request sent to node: ", node)
+# TODO: Fix solved number
 
 
 class P2PServer:
-    def __init__(self, port: int, parent: Optional[str], handicap: int):
+    def __init__(self, port: int, parent: Optional[str], handicap: float):
         self.address = (socket.gethostbyname(socket.gethostname()), port)
         self.handicap = handicap
         self.solved: int = 0
         self.validations: int = 0
         self.parent = parent
 
-        # sudokus        -> {id: (grid: Sudoku, complete: bool, jobs: jobs_structure, address: Address)}
-        # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]. List index is the square number.
-        self.sudokus: dict[str, tuple[Sudoku, bool, jobs_structure, Address]] = {}
+        # sudokus        -> {id: (grid: Sudoku, jobs: jobs_structure, address: Address)}
+        # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]
+        self.sudokus: dict[str, tuple[Sudoku, jobs_structure, Address]] = {}
 
         # {node_addr: Address: (socket: socket.socket, solved: int, validations: int)}
         self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
@@ -93,7 +92,6 @@ class P2PServer:
         sudoku = Sudoku(grid)
         self.sudokus[_id] = (
             sudoku,
-            False,
             [(JobStatus.PENDING, None) for _ in range(0, 9)],
             self.address,
         )
@@ -108,9 +106,8 @@ class P2PServer:
         data = P2PProtocol.recv_msg(conn)
 
         if data is None:
-            address = [k for (k, v) in self.neighbors.items() if v[0] == conn][0]
             logging.warning(
-                f"Node {AddressUtils.address_to_str(address)} has disconnected"
+                f"Node {AddressUtils.address_to_str(self.get_address_from_socket(conn))} has disconnected"
             )
             self.sel.unregister(conn)
             conn.close()
@@ -137,13 +134,16 @@ class P2PServer:
             message = JoinOtherResponse(self.solved, self.validations)
             self.neighbors[data.address] = (conn, 0, 0)
             P2PProtocol.send_msg(conn, message)
+            logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinOtherResponse):
             self.neighbors[conn.getsockname()] = (conn, data.solved, data.validations)
         elif isinstance(data, KeepAlive):
             # TODO: Is this needed?
             pass
         elif isinstance(data, WorkRequest):
-            self.handle_work_request(data)
+            threading.Thread(
+                target=self.handle_work_request, args=(conn, data), daemon=True
+            ).start()
         elif isinstance(data, WorkAck):
             # TODO: Implement this. A job data structure is yet to be created.
             pass
@@ -156,48 +156,124 @@ class P2PServer:
         else:
             print("Unsupported message", data)
 
-    async def distribute_work(self, sudoku_id: str):
-        new_grid = ""
-        (grid, complete, jobs, _) = self.sudokus[sudoku_id]
-        number_of_progress_nodes = 0
-        number_of_completed_nodes = 0
+    def handle_work_request(self, conn: socket.socket, data: WorkRequest):
+        grid_from_upstream = data.sudoku.grid
+        addr = self.get_address_from_socket(conn)
 
-        while not complete:
+        logging.info(
+            f"Handling work {data.job} from {addr} with grid\n{data.sudoku}\nand jobs {data.jobs}"
+        )
+
+        self.sudokus[data.id] = (
+            data.sudoku,
+            data.jobs,
+            self.get_address_from_socket(conn),
+        )
+        P2PProtocol.send_msg(conn, WorkAck(data.id, data.job))
+
+        changing_grid = data.sudoku.grid
+
+        while True:
+            if grid_from_upstream != self.sudokus[data.id][0].grid:
+                return
+
+            changing_grid, completed = Sudoku.update_square(data.job, changing_grid)
+            self.validations = self.validations + 1
+
+            if completed:
+                self.sudokus[data.id][1][data.job] = (
+                    JobStatus.COMPLETED,
+                    self.sudokus[data.id][1][data.job][1],
+                )
+                self.sudokus[data.id][0].grid = changing_grid
+                break
+
+        time.sleep(self.handicap)
+
+        logging.info(
+            f"Finished work {data.job} from {addr} with grid\n{self.sudokus[data.id][0]}"
+        )
+
+        for sock in [n[0] for n in self.neighbors.values()]:
+            P2PProtocol.send_msg(
+                sock,
+                WorkComplete(
+                    data.id, self.sudokus[data.id][0], data.job, self.validations
+                ),
+            )
+
+    def handle_work_complete(self, conn: socket.socket, data: WorkComplete):
+        addr = self.get_address_from_socket(conn)
+
+        logging.info(
+            f"Received complete work {data.job} from {addr} with grid\n{data.sudoku}"
+        )
+
+        self.neighbors[addr] = (self.neighbors[addr][0], data.validations, 0)
+        self.sudokus[data.id] = (
+            data.sudoku,
+            self.sudokus[data.id][1],
+            self.sudokus[data.id][2],
+        )
+
+    async def distribute_work(self, sudoku_id: str):
+        new_grid = []
+        (grid, jobs, _) = self.sudokus[sudoku_id]
+
+        while not self.is_sudoku_completed(sudoku_id):
+            time.sleep(0.2)  # TODO: Remove this
+
             for square in range(9):
-                number_of_nodes = len(self.get_network())
-                time.sleep(0.2)
+                job = self.sudokus[sudoku_id][1][square]
+
                 if (
-                    jobs[square][0] == JobStatus.PENDING
-                    and number_of_progress_nodes < number_of_nodes
+                    job[0] == JobStatus.PENDING
+                    and len(self.get_addresses_of_free_nodes(sudoku_id)) != 0
                 ):
-                    send_work_request(sudoku_id, square)
-                    number_of_progress_nodes += 1
-                    jobs[square] = (JobStatus.IN_PROGRESS, self.address)
-                elif jobs[square][0] == JobStatus.IN_PROGRESS:
-                    if number_of_nodes < number_of_progress_nodes:
-                        number_of_progress_nodes -= 1
-                        jobs[square] = (JobStatus.PENDING, None)
-                        logging.info(
-                            f"Job canceled by node: {jobs[square][1]} (node down)"
-                        )
-                        break
-                    jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
-                    square_values = self.sudokus[sudoku_id][0].return_square(square)
-                    new_grid = self.sudokus[sudoku_id][0].update_square(
-                        square, square_values
+                    node = self.get_addresses_of_free_nodes(sudoku_id)[0]
+
+                    logging.info(f"Sending job {square} to {node} with grid\n{grid}")
+
+                    self.sudokus[sudoku_id][1][square] = (
+                        JobStatus.IN_PROGRESS,
+                        node,
                     )
-                    logging.info(f"Job completed by node: {jobs[square][1]}")
-                    number_of_progress_nodes -= 1
-                elif jobs[square][0] == JobStatus.COMPLETED:
-                    jobs[square] = (JobStatus.COMPLETED, jobs[square][1])
-                    number_of_completed_nodes += 1
-                    if number_of_completed_nodes == 9:
-                        complete = True
-                        logging.info("All jobs done")
-                print("jobs: ", jobs)
+                    P2PProtocol.send_msg(
+                        self.neighbors[node][0],
+                        WorkRequest(
+                            sudoku_id,
+                            grid,
+                            self.sudokus[sudoku_id][1],
+                            square,
+                        ),
+                    )
+                    break
 
         logging.info(f"{sudoku_id} solved: {new_grid}")
         return new_grid
+
+    def get_addresses_of_free_nodes(self, sudoku_id: str) -> list[Address]:
+        return list(
+            set(self.neighbors.keys())
+            - set(
+                [
+                    job[1]
+                    for job in self.sudokus[sudoku_id][1]
+                    if job[0] == JobStatus.IN_PROGRESS
+                ]
+            )
+        )
+
+    def get_address_from_executed_nodes(self, sudoku_id: str):
+        return [
+            job[1] for job in self.sudokus[sudoku_id][1] if job[0] == JobStatus.PENDING
+        ]
+
+    def get_address_from_socket(self, conn: socket.socket) -> Address:
+        return [k for (k, v) in self.neighbors.items() if v[0] == conn][0]
+
+    def is_sudoku_completed(self, id: str):
+        return all([job[0] == JobStatus.COMPLETED for job in self.sudokus[id][1]])
 
     def run(self):
         if self.parent is not None:
