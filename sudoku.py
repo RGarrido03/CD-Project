@@ -152,11 +152,23 @@ class Sudoku:
         return extracted_square
 
     @classmethod
+    def get_number_of_zeros_in_square(cls, square: int, grid: sudoku_type) -> int:
+        start_row, start_col = (square // 3) * 3, (square % 3) * 3
+        return sum(
+            [
+                1
+                for i in range(3)
+                for j in range(3)
+                if grid[i + start_row][j + start_col] == 0
+            ]
+        )
+
+    @classmethod
     def update_square(cls, square: int, grid: sudoku_type) -> tuple[sudoku_type, bool]:
         rows_idx = [i + ((square // 3) * 3) for i in range(3)]
         cols_idx = [i + ((square % 3) * 3) for i in range(3)]
 
-        zeros_number = sum([1 for i in rows_idx for j in cols_idx if grid[i][j] == 0])
+        zeros_number = cls.get_number_of_zeros_in_square(square, grid)
 
         if zeros_number == 0:
             return grid, True

@@ -173,13 +173,17 @@ class P2PServer:
         P2PProtocol.send_msg(conn, WorkAck(data.id, data.job))
 
         changing_grid = data.sudoku.grid
+        number_of_zeros = Sudoku.get_number_of_zeros_in_square(data.job, changing_grid)
 
         while True:
             if grid_from_upstream != self.sudokus[data.id][0].grid:
+                logging.warning(f"Work {data.job} canceled")
                 return
 
             changing_grid, completed = Sudoku.update_square(data.job, changing_grid)
             self.validations = self.validations + 1
+
+            time.sleep(self.handicap / (number_of_zeros + 1))
 
             if completed:
                 self.sudokus[data.id][1][data.job] = (
@@ -188,8 +192,6 @@ class P2PServer:
                 )
                 self.sudokus[data.id][0].grid = changing_grid
                 break
-
-        time.sleep(self.handicap)
 
         logging.info(
             f"Finished work {data.job} from {addr} with grid\n{self.sudokus[data.id][0]}"
