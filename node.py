@@ -13,7 +13,7 @@ class Node:
     def __init__(
         self, http_port: int, p2p_port: int, address: Optional[str], handicap: int
     ):
-        self.p2p = P2PServer(p2p_port, address, handicap)
+        self.p2p = P2PServer(p2p_port, address, handicap / 1000)
 
         self.http_thread = threading.Thread(
             target=run_http_server, args=(http_port, self.p2p), daemon=True
@@ -36,7 +36,7 @@ def main():
         help="P2P network's address",
         type=str,
     )
-    parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=0)
+    parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=2000)
     args = parser.parse_args()
 
     node = Node(args.port, args.service, args.address, args.handicap)
