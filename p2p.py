@@ -35,6 +35,7 @@ class P2PServer:
         self.solved: int = 0
         self.validations: int = 0
         self.parent = parent
+        logging.basicConfig(encoding="utf-8", level=logging.DEBUG)
 
         # sudokus        -> {id: (grid: Sudoku, jobs: jobs_structure, address: Address)}
         # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]
