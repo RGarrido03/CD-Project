@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 from collections import deque
@@ -142,29 +143,41 @@ class Sudoku:
 
         return True
 
-    def return_square(self, square: int) -> list[list[int]]:
+    @classmethod
+    def return_square(cls, square: int, grid: sudoku_type) -> list[list[int]]:
         start_row, start_col = (square // 3) * 3, (square % 3) * 3
         extracted_square = [
-            [self.grid[i + start_row][j + start_col] for j in range(3)]
-            for i in range(3)
+            [grid[i + start_row][j + start_col] for j in range(3)] for i in range(3)
         ]
         return extracted_square
 
-    import random
+    @classmethod
+    def update_square(cls, square: int, grid: sudoku_type) -> tuple[sudoku_type, bool]:
+        rows_idx = [i + ((square // 3) * 3) for i in range(3)]
+        cols_idx = [i + ((square % 3) * 3) for i in range(3)]
 
-    def update_square(self, square: int, new_values: list[list[int]]):
-        new_values = [
-            [
-                random.randint(1, 9) if new_values[i][j] == 0 else new_values[i][j]
-                for j in range(3)
-            ]
-            for i in range(3)
-        ]
-        start_row, start_col = (square // 3) * 3, (square % 3) * 3
-        for i in range(3):
-            for j in range(3):
-                self.grid[start_row + i][start_col + j] = new_values[i][j]
-        return self.grid
+        zeros_number = sum([1 for j in rows_idx for i in cols_idx if grid[i][j] == 0])
+
+        if zeros_number == 0:
+            return grid, True
+
+        logging.info(f"Updating square {square} with {zeros_number} zeros")
+
+        for i in rows_idx:
+            row = grid[i]
+            for j in cols_idx:
+                col = [grid[k][j] for k in range(9)]
+                if grid[i][j] == 0:
+                    while True:
+                        new_value = random.randint(1, 9)
+                        if (
+                            new_value not in row
+                            and new_value not in col
+                            and new_value not in cls.return_square(square, grid)
+                        ):
+                            grid[i][j] = new_value
+                            logging.info(f"Updated with {new_value} in grid {grid}")
+                            return grid, zeros_number == 1
 
 
 if __name__ == "__main__":
