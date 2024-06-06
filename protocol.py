@@ -3,8 +3,9 @@ from enum import Enum
 from socket import socket
 from typing import Optional
 
-from consts import Command, Role
-from custom_types import Address
+from consts import Command
+from custom_types import Address, jobs_structure
+from sudoku import Sudoku
 
 
 class Message:
@@ -100,30 +101,36 @@ class WorkRequest(Message):
 
     :param id: Job UUID.
     :type id: str
-    :param sudoku: Sudoku grid.
-    :type sudoku: list[list[int]]
-    :param role: Role.
-    :type role: Role
+    :param sudoku: Sudoku object.
+    :type sudoku: Sudoku
+    :param jobs: Current jobs status for the related sudoku
+    :type jobs: jobs_structure
+    :param job: Job (aka square) number.
+    :type job: int
     """
 
-    def __init__(self, id: str, sudoku: list[list[int]], role: Role):
+    def __init__(self, id: str, sudoku: Sudoku, jobs: jobs_structure, job: int):
         super().__init__(Command.WORK_REQUEST)
         self.id = id
         self.sudoku = sudoku
-        self.role = role
+        self.jobs = jobs
+        self.job = job
 
 
 class WorkAck(Message):
     """
     Acknowledge WorkRequest message.
 
-    :param id: Job UUID.
+    :param id: Sudoku UUID.
     :type id: str
+    :param job: Job (aka square) number.
+    :type job: int
     """
 
-    def __init__(self, id: str):
+    def __init__(self, id: str, job: int):
         super().__init__(Command.WORK_ACK)
         self.id = id
+        self.job = job
 
 
 class WorkComplete(Message):
@@ -136,16 +143,19 @@ class WorkComplete(Message):
 
     :param id: Job UUID.
     :type id: str
-    :param grid: Solved grid
-    :type grid: list[list[int]]
+    :param sudoku: Sudoku object.
+    :type sudoku: Sudoku
+    :param job: Job (aka square) number.
+    :type job: int
     :param validations: Number of validations.
     :type validations: int
     """
 
-    def __init__(self, id: str, grid: list[list[int]], validations: int):
+    def __init__(self, id: str, sudoku: Sudoku, job: int, validations: int):
         super().__init__(Command.WORK_COMPLETE)
         self.id = id
-        self.grid = grid
+        self.sudoku = sudoku
+        self.job = job
         self.validations = validations
 
 
@@ -156,9 +166,11 @@ class WorkCancel(Message):
 
     :param id: Job UUID.
     :type id: str
+    :param job: Job (aka square) number.
+    :type job: int
     """
 
-    def __init__(self, id: str):
+    def __init__(self, id: str, job: int):
         super().__init__(Command.WORK_CANCEL)
         self.id = id
         self.job = job
@@ -172,11 +184,13 @@ class WorkCancelAck(Message):
 
     :param id: Job UUID.
     :type id: str
+    :param job: Job (aka square) number.
+    :type job: int
     :param validations: Number of validations.
     :type validations: int
     """
 
-    def __init__(self, id: str, validations: int):
+    def __init__(self, id: str, job: int, validations: int):
         super().__init__(Command.WORK_CANCEL_ACK)
         self.id = id
         self.job = job

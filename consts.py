@@ -18,9 +18,3 @@ class JobStatus(IntEnum):
     PENDING = 1
     IN_PROGRESS = 2
     COMPLETED = 3
-
-
-class Role(IntEnum):
-    LINES = 1
-    COLUMNS = 2
-    SQUARES = 3
