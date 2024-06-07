@@ -38,9 +38,9 @@ class P2PServer:
 
         # sudokus        -> {id: (grid: Sudoku, jobs: jobs_structure, address: Address)}
         # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]
-        self.sudokus: dict[
-            str, tuple[Sudoku, jobs_structure, Address, sudoku_type]
-        ] = {}
+        self.sudokus: dict[str, tuple[Sudoku, jobs_structure, Address, sudoku_type]] = (
+            {}
+        )
 
         # {node_addr: Address: (socket: socket.socket, validations: int)}
         self.neighbors: dict[Address, tuple[socket.socket, int]] = {}
@@ -129,17 +129,20 @@ class P2PServer:
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
         conn.setblocking(False)
+        conn.settimeout(1)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
 
     def read(self, conn: socket.socket):
         data = P2PProtocol.recv_msg(conn)
 
         if data is None:
+            addr = self.get_address_from_socket(conn)
             logging.warning(
-                f"Node {AddressUtils.address_to_str(self.get_address_from_socket(conn))} has disconnected"
+                f"Node {AddressUtils.address_to_str(addr)} has disconnected"
             )
             self.sel.unregister(conn)
             conn.close()
+            self.cancel_disconnecting_node_jobs(addr)
             self.neighbors = {k: v for (k, v) in self.neighbors.items() if v[0] != conn}
             return
 
@@ -343,6 +346,12 @@ class P2PServer:
 
     def get_address_from_socket(self, conn: socket.socket) -> Address:
         return [k for (k, v) in self.neighbors.items() if v[0] == conn][0]
+
+    def cancel_disconnecting_node_jobs(self, addr: Address):
+        for id, sudoku in self.sudokus.items():
+            for i, job in enumerate(sudoku[1]):
+                if job[0] == JobStatus.IN_PROGRESS and job[1] == addr:
+                    self.sudokus[id][1][i] = (JobStatus.PENDING, addr)
 
     def is_sudoku_completed(self, id: str):
         return all([job[0] == JobStatus.COMPLETED for job in self.sudokus[id][1]])
