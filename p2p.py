@@ -24,8 +24,6 @@ from protocol import (
 )
 from sudoku import Sudoku
 
-# TODO: Fix solved number
-
 
 class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: float):
@@ -151,7 +149,10 @@ class P2PServer:
             P2PProtocol.send_msg(conn, message)
             logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinOtherResponse):
-            self.neighbors[conn.getsockname()] = (conn, data.validations)
+            self.neighbors[self.get_address_from_socket(conn)] = (
+                conn,
+                data.validations,
+            )
         elif isinstance(data, KeepAlive):
             # TODO: Is this needed?
             pass
