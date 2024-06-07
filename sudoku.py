@@ -164,6 +164,13 @@ class Sudoku:
         )
 
     @classmethod
+    def replace_square(cls, square: int, values: list[list[int]], grid: sudoku_type):
+        start_row, start_col = (square // 3) * 3, (square % 3) * 3
+        for i in range(3):
+            for j in range(3):
+                grid[i + start_row][j + start_col] = values[i][j]
+
+    @classmethod
     def update_square(cls, square: int, grid: sudoku_type) -> tuple[sudoku_type, bool]:
         rows_idx = [i + ((square // 3) * 3) for i in range(3)]
         cols_idx = [i + ((square % 3) * 3) for i in range(3)]
