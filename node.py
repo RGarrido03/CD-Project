@@ -10,6 +10,7 @@ class Node:
     def __init__(
         self, http_port: int, p2p_port: int, address: Optional[str], handicap: int
     ):
+        self.http_port = http_port
         self.p2p = P2PServer(p2p_port, address, handicap / 1000)
 
         self.http_thread = threading.Thread(

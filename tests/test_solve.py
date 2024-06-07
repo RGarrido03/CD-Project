@@ -59,3 +59,20 @@ def test(node_0, node_1, node_2, node_3):
 
     assert response.status_code == 200
     assert response.json()["sudoku"] == gen_sudoku.grid
+
+    print(node_0.p2p.neighbors)
+    print(node_1.p2p.neighbors)
+    print(node_2.p2p.neighbors)
+    print(node_3.p2p.neighbors)
+
+    # Assert solved count
+    assert node_0.p2p.solved == 1
+    assert node_1.p2p.solved == 1
+    assert node_2.p2p.solved == 1
+    assert node_3.p2p.solved == 1
+
+    # Assert stats endpoint
+    for node in [node_0, node_1, node_2, node_3]:
+        stats = requests.get(f"http://localhost:{node.http_port}/stats")
+        assert stats.status_code == 200
+        assert stats.json()["all"] == {"solved": 1, "validations": 3}
