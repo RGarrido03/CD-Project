@@ -20,8 +20,11 @@ class Node:
         )
 
     def run(self):
-        self.http_thread.start()
-        self.p2p.run()
+        try:
+            self.http_thread.start()
+            self.p2p.run()
+        except KeyboardInterrupt:
+            self.p2p.socket.close()
 
 
 def main():
