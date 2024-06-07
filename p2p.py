@@ -53,14 +53,23 @@ class P2PServer:
         self.sel.register(self.socket, selectors.EVENT_READ, self.accept)
 
     def connect_to_node(self, addr: Address, parent: bool = False):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.neighbors[addr] = (sock, 0, 0)
-        # TODO: Timeout
-        sock.connect(addr)
-        self.sel.register(sock, selectors.EVENT_READ, self.read)
-
-        message = JoinParent(self.address) if parent else JoinOther(self.address)
-        P2PProtocol.send_msg(sock, message)
+        wait = 1
+        while True:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect(addr)
+                self.sel.register(sock, selectors.EVENT_READ, self.read)
+                self.neighbors[addr] = (sock, 0, 0)
+                message = (
+                    JoinParent(self.address) if parent else JoinOther(self.address)
+                )
+                P2PProtocol.send_msg(sock, message)
+                break
+            except ConnectionRefusedError:
+                logging.error(
+                    f"Failed to connect to {AddressUtils.address_to_str(addr)}. Retrying in {wait * 2}s"
+                )
+                time.sleep(wait := wait * 2)
 
     def get_stats(self) -> dict[str, Any]:
         return {
