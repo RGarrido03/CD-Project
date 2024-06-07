@@ -31,7 +31,7 @@ from sudoku import Sudoku
 
 class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: float):
-        self.address = (socket.gethostbyname(socket.gethostname()), port)
+        self.address = (socket.gethostbyname_ex(socket.gethostname())[2][1], port)
         self.handicap = handicap
         self.solved: int = 0  # Global state across the network
         self.validations: int = 0  # Node-only state
