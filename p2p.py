@@ -43,8 +43,8 @@ class P2PServer:
             {}
         )
 
-        # {node_addr: Address: (socket: socket.socket, validations: int)}
-        self.neighbors: dict[Address, tuple[socket.socket, int]] = {}
+        # {node_addr: Address: (socket: socket.socket, validations: int, timeout: float)}
+        self.neighbors: dict[Address, tuple[socket.socket, int, float]] = {}
 
         # {old_squares: new_squares}
         self.squares_history: dict[json, sudoku_type | None] = {}
@@ -64,7 +64,7 @@ class P2PServer:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(addr)
                 self.sel.register(sock, selectors.EVENT_READ, self.read)
-                self.neighbors[addr] = (sock, 0)
+                self.neighbors[addr] = (sock, 0, time.time())
                 message = (
                     JoinParent(self.address) if parent else JoinOther(self.address)
                 )
@@ -136,31 +136,33 @@ class P2PServer:
         conn.settimeout(1)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
 
+    def disconnect_node(self, conn: socket.socket):
+        addr = self.get_address_from_socket(conn)
+        logging.warning(f"Node {AddressUtils.address_to_str(addr)} has disconnected")
+        self.sel.unregister(conn)
+        conn.close()
+        self.cancel_disconnecting_node_jobs(addr)
+        self.neighbors = {k: v for (k, v) in self.neighbors.items() if v[0] != conn}
+
     def read(self, conn: socket.socket):
         data = P2PProtocol.recv_msg(conn)
 
         if data is None:
-            addr = self.get_address_from_socket(conn)
-            logging.warning(
-                f"Node {AddressUtils.address_to_str(addr)} has disconnected"
-            )
-            self.sel.unregister(conn)
-            conn.close()
-            self.cancel_disconnecting_node_jobs(addr)
-            self.neighbors = {k: v for (k, v) in self.neighbors.items() if v[0] != conn}
+            self.disconnect_node(conn)
             return
 
-        logging.info(
-            "Received %s at %s: %s",
-            type(data).__name__,
-            datetime.now().time().replace(microsecond=0).isoformat(),
-            data,
-        )
+        if not isinstance(data, KeepAlive):
+            logging.info(
+                "Received %s at %s: %s",
+                type(data).__name__,
+                datetime.now().time().replace(microsecond=0).isoformat(),
+                data,
+            )
 
         if isinstance(data, JoinParent):
             neighbors = list(self.neighbors.keys())
             message = JoinParentResponse(neighbors)
-            self.neighbors[data.address] = (conn, 0)
+            self.neighbors[data.address] = (conn, 0, time.time())
             P2PProtocol.send_msg(conn, message)
             logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinParentResponse):
@@ -175,17 +177,21 @@ class P2PServer:
             )
         elif isinstance(data, JoinOther):
             message = JoinOtherResponse(self.solved, self.validations)
-            self.neighbors[data.address] = (conn, 0)
+            self.neighbors[data.address] = (conn, 0, time.time())
             P2PProtocol.send_msg(conn, message)
             logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinOtherResponse):
             self.neighbors[self.get_address_from_socket(conn)] = (
                 conn,
                 data.validations,
+                time.time(),
             )
         elif isinstance(data, KeepAlive):
-            # TODO: Is this needed?
-            pass
+            self.neighbors[self.get_address_from_socket(conn)] = (
+                conn,
+                self.neighbors[self.get_address_from_socket(conn)][1],
+                time.time(),
+            )
         elif isinstance(data, WorkRequest):
             threading.Thread(
                 target=self.handle_work_request, args=(conn, data), daemon=True
@@ -265,7 +271,7 @@ class P2PServer:
             f"Received complete work {data.job} from {addr} with grid\n{data.sudoku}"
         )
 
-        self.neighbors[addr] = (self.neighbors[addr][0], data.validations)
+        self.neighbors[addr] = (self.neighbors[addr][0], data.validations, time.time())
 
         self.update_sudoku_with_new_values(data.id, data.sudoku.grid, data.job)
         self.sudokus[data.id][1][data.job] = (
@@ -386,7 +392,25 @@ class P2PServer:
             for col in cols_idx:
                 self.sudokus[sudoku_id][0].grid[row][col] = new_grid[row][col]
 
+    def send_keep_alive_to_neighbors(self):
+        while True:
+            time.sleep(2)
+            for sock in [n[0] for n in self.neighbors.values()]:
+                P2PProtocol.send_msg(sock, KeepAlive())
+
+    def check_keep_alive_from_neighbors(self):
+        while True:
+            current = time.time()
+            for addr, (conn, _, last_beat) in self.neighbors.items():
+                if current - last_beat > 5:
+                    self.disconnect_node(conn)
+
     def run(self):
+        threading.Thread(target=self.send_keep_alive_to_neighbors, daemon=True).start()
+        threading.Thread(
+            target=self.check_keep_alive_from_neighbors, daemon=True
+        ).start()
+
         if self.parent is not None:
             self.connect_to_node(AddressUtils.str_to_address(self.parent), parent=True)
 
