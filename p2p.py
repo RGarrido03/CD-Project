@@ -1,3 +1,4 @@
+import json
 import logging
 import selectors
 import socket
@@ -109,7 +110,8 @@ class P2PServer:
         self.original_sudoku = str(grid)
         if self.original_sudoku in self.previosly_solved:
             logging.info("Grid already solved")
-            return self.previosly_solved[str(grid)]
+            solved_grid = json.loads(self.previosly_solved[self.original_sudoku])
+            return solved_grid
         _id = str(uuid.uuid4())
         sudoku = Sudoku(grid)
         self.sudokus[_id] = (
