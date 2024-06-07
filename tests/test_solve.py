@@ -1,4 +1,5 @@
 import threading
+import time
 
 import pytest
 import requests
@@ -9,7 +10,7 @@ from node import Node
 
 @pytest.fixture
 def node_0():
-    node = Node(8000, 7000, None, 0)
+    node = Node(8000, 6000, None, 0)
 
     thread = threading.Thread(target=node.run, daemon=True)
     thread.start()
@@ -18,7 +19,8 @@ def node_0():
 
 @pytest.fixture
 def node_1():
-    node = Node(8001, 7001, "127.0.0.1:7000", 0)
+    node = Node(8001, 7001, "127.0.0.1:6000", 0)
+    time.sleep(0.2)
 
     thread = threading.Thread(target=node.run, daemon=True)
     thread.start()
@@ -27,7 +29,8 @@ def node_1():
 
 @pytest.fixture
 def node_2():
-    node = Node(8002, 7002, "127.0.0.1:7000", 0)
+    node = Node(8002, 7002, "127.0.0.1:6000", 0)
+    time.sleep(0.2)
 
     thread = threading.Thread(target=node.run, daemon=True)
     thread.start()
@@ -37,6 +40,7 @@ def node_2():
 @pytest.fixture
 def node_3():
     node = Node(8003, 7003, "127.0.0.1:7002", 0)
+    time.sleep(0.2)
 
     thread = threading.Thread(target=node.run, daemon=True)
     thread.start()
