@@ -10,8 +10,6 @@ class Command(IntEnum):
     WORK_REQUEST = 10  # Give work to a node
     WORK_ACK = 11  # Ok, I'll do that
     WORK_COMPLETE = 12  # When a node finishes its job
-    WORK_CANCEL = 13  # Cancel a job that other node already finished
-    WORK_CANCEL_ACK = 14  # Acknowledge cancel
 
 
 class JobStatus(IntEnum):

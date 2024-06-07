@@ -20,8 +20,6 @@ from protocol import (
     WorkRequest,
     WorkAck,
     WorkComplete,
-    WorkCancel,
-    WorkCancelAck,
 )
 from sudoku import Sudoku
 
@@ -165,10 +163,6 @@ class P2PServer:
             pass
         elif isinstance(data, WorkComplete):
             self.handle_work_complete(conn, data)
-        elif isinstance(data, WorkCancel):
-            self.handle_work_cancel(conn, data)
-        elif isinstance(data, WorkCancelAck):
-            self.handle_work_cancel_ack(conn, data)
         else:
             print("Unsupported message", data)
 

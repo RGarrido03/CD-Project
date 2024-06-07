@@ -159,44 +159,6 @@ class WorkComplete(Message):
         self.validations = validations
 
 
-class WorkCancel(Message):
-    """
-    When a sudoku is completed on a node, the other ones don't need to find the solution anymore.
-    This message cancels a job.
-
-    :param id: Job UUID.
-    :type id: str
-    :param job: Job (aka square) number.
-    :type job: int
-    """
-
-    def __init__(self, id: str, job: int):
-        super().__init__(Command.WORK_CANCEL)
-        self.id = id
-        self.job = job
-
-
-class WorkCancelAck(Message):
-    """
-    Acknowledge WorkCancel message.
-    It includes the number of validations, for updating the stats.
-    In this case, the solved number is unchanged, since no solution was found in the node until then.
-
-    :param id: Job UUID.
-    :type id: str
-    :param job: Job (aka square) number.
-    :type job: int
-    :param validations: Number of validations.
-    :type validations: int
-    """
-
-    def __init__(self, id: str, job: int, validations: int):
-        super().__init__(Command.WORK_CANCEL_ACK)
-        self.id = id
-        self.job = job
-        self.validations = validations
-
-
 class P2PProtocol:
     @classmethod
     def send_msg(
