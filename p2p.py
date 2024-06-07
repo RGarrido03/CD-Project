@@ -36,7 +36,7 @@ class P2PServer:
         self.solved: int = 0  # Global state across the network
         self.validations: int = 0  # Node-only state
         self.parent = parent
-        logging.basicConfig(encoding="utf-8", level=logging.DEBUG)
+        logging.basicConfig(encoding="utf-8", level=logging.INFO)
 
         # sudokus        -> {id: (grid: Sudoku, jobs: jobs_structure, address: Address)}
         # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]
@@ -293,7 +293,6 @@ class P2PServer:
         copy_grid = copy.deepcopy(grid.grid)
 
         while not self.is_sudoku_completed(sudoku_id):
-            time.sleep(0.1)
             logging.debug(f"Jobs: {jobs}")
             zeros_per_square = [
                 (i, Sudoku.get_number_of_zeros_in_square(i, grid.grid))
