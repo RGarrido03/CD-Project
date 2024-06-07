@@ -224,11 +224,24 @@ class P2PServer:
         (grid, jobs, _) = self.sudokus[sudoku_id]
 
         while not self.is_sudoku_completed(sudoku_id):
-            time.sleep(0.5)  # TODO: Remove this
+            time.sleep(0.5)
             logging.debug(f"Jobs: {jobs}")
+            zeros_per_square = [
+                (i, Sudoku.get_number_of_zeros_in_square(i, grid.grid))
+                for i in range(9)
+            ]
+            zeros_per_square.sort(key=lambda x: x[1])
 
-            for square in range(9):
+            for square, zeros in zeros_per_square:
                 job = self.sudokus[sudoku_id][1][square]
+
+                if zeros == 0:
+                    if job[0] != JobStatus.COMPLETED:
+                        self.sudokus[sudoku_id][1][square] = (
+                            JobStatus.COMPLETED,
+                            self.sudokus[sudoku_id][1][square][1],
+                        )
+                    continue
 
                 if (
                     job[0] == JobStatus.PENDING
