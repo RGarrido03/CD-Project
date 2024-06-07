@@ -185,7 +185,12 @@ class Sudoku:
                         if (
                             new_value not in row
                             and new_value not in col
-                            and new_value not in cls.return_square(square, grid)
+                            and new_value
+                            not in [
+                                num
+                                for lst in cls.return_square(square, grid)
+                                for num in lst
+                            ]
                         ):
                             grid[i][j] = new_value
                             logging.info(f"Updated ({i}, {j}) with {new_value}")

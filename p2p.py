@@ -158,7 +158,6 @@ class P2PServer:
             print("Unsupported message", data)
 
     def handle_work_request(self, conn: socket.socket, data: WorkRequest):
-        logging.error(f"Starting handle_work_request for {data.job}")
         grid_from_upstream = data.sudoku.grid
         addr = self.get_address_from_socket(conn)
 
@@ -205,10 +204,8 @@ class P2PServer:
                     data.id, self.sudokus[data.id][0], data.job, self.validations
                 ),
             )
-        logging.error(f"Ending handle_work_request for {data.job}")
 
     def handle_work_complete(self, conn: socket.socket, data: WorkComplete):
-        logging.error(f"Starting handle_work_complete for {data.job}")
         addr = self.get_address_from_socket(conn)
 
         logging.info(
@@ -222,8 +219,6 @@ class P2PServer:
             JobStatus.COMPLETED,
             self.sudokus[data.id][1][data.job][1],
         )
-
-        logging.error(f"Ending handle_work_complete for {data.job}")
 
     async def distribute_work(self, sudoku_id: str):
         (grid, jobs, _) = self.sudokus[sudoku_id]
@@ -259,6 +254,8 @@ class P2PServer:
                     break
 
         logging.info(f"{sudoku_id} solved: {self.sudokus[sudoku_id][0]}")
+        if not self.sudokus[sudoku_id][0].check():
+            return None
         return self.sudokus[sudoku_id][0].grid
 
     def get_addresses_of_free_nodes(self, sudoku_id: str) -> list[Address]:
