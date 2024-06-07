@@ -224,9 +224,13 @@ class P2PServer:
         else:
             print("Unsupported message", data)
 
-    def handle_work_request(self, conn: socket.socket, data: WorkRequest):
+    def handle_work_request(
+        self, conn: socket.socket, data: WorkRequest, self_call: bool = False
+    ):
         grid_from_upstream = data.sudoku.grid
-        addr = self.get_address_from_socket(conn)
+        addr = (
+            self.get_address_from_socket(conn) if conn != self.socket else self.address
+        )
 
         logging.info(
             f"Handling work {data.job} from {addr} with grid\n{data.sudoku}\nand jobs {data.jobs}"
@@ -235,10 +239,12 @@ class P2PServer:
         self.sudokus[data.id] = (
             data.sudoku,
             data.jobs,
-            self.get_address_from_socket(conn),
+            self.get_address_from_socket(conn) if not self_call else self.address,
             self.sudokus[data.id][3],
         )
-        P2PProtocol.send_msg(conn, WorkAck(data.id, data.job))
+
+        if not self_call:
+            P2PProtocol.send_msg(conn, WorkAck(data.id, data.job))
 
         changing_grid = data.sudoku.grid
         number_of_zeros = Sudoku.get_number_of_zeros_in_square(data.job, changing_grid)
@@ -273,14 +279,27 @@ class P2PServer:
                 ),
             )
 
-    def handle_work_complete(self, conn: socket.socket, data: WorkComplete):
-        addr = self.get_address_from_socket(conn)
+        self.handle_work_complete(
+            conn,
+            WorkComplete(data.id, self.sudokus[data.id][0], data.job, self.validations),
+            self_call,
+        )
+
+    def handle_work_complete(
+        self, conn: socket.socket, data: WorkComplete, self_call: bool = False
+    ):
+        addr = self.get_address_from_socket(conn) if not self_call else self.address
 
         logging.info(
             f"Received complete work {data.job} from {addr} with grid\n{data.sudoku}"
         )
 
-        self.neighbors[addr] = (self.neighbors[addr][0], data.validations, time.time())
+        if not self_call:
+            self.neighbors[addr] = (
+                self.neighbors[addr][0],
+                data.validations,
+                time.time(),
+            )
 
         self.update_sudoku_with_new_values(data.id, data.sudoku.grid, data.job)
         self.sudokus[data.id][1][data.job] = (
@@ -333,15 +352,28 @@ class P2PServer:
                         JobStatus.IN_PROGRESS,
                         node,
                     )
-                    P2PProtocol.send_msg(
-                        self.neighbors[node][0],
-                        WorkRequest(
-                            sudoku_id,
-                            grid,
-                            self.sudokus[sudoku_id][1],
-                            square,
-                        ),
-                    )
+
+                    if node == self.address:
+                        self.handle_work_request(
+                            self.socket,
+                            WorkRequest(
+                                sudoku_id,
+                                grid,
+                                self.sudokus[sudoku_id][1],
+                                square,
+                            ),
+                            self_call=True,
+                        )
+                    else:
+                        P2PProtocol.send_msg(
+                            self.neighbors[node][0],
+                            WorkRequest(
+                                sudoku_id,
+                                grid,
+                                self.sudokus[sudoku_id][1],
+                                square,
+                            ),
+                        )
                     break
 
         logging.info(f"{sudoku_id} solved: {self.sudokus[sudoku_id][0]}")
@@ -362,8 +394,10 @@ class P2PServer:
         return self.sudokus[sudoku_id][0].grid
 
     def get_addresses_of_free_nodes(self, sudoku_id: str) -> list[Address]:
+        all_nodes = set(self.neighbors.keys())
+        all_nodes.add(self.address)
         return list(
-            set(self.neighbors.keys())
+            all_nodes
             - set(
                 [
                     job[1]
