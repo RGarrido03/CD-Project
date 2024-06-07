@@ -1,4 +1,5 @@
 import pickle
+from abc import ABC
 from enum import Enum
 from socket import socket
 from typing import Optional
@@ -8,7 +9,7 @@ from custom_types import Address, jobs_structure
 from sudoku import Sudoku
 
 
-class Message:
+class Message(ABC):
     """
     Base class for all protocol messages.
 
