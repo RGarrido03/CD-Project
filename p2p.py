@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 import selectors
 import socket
@@ -44,6 +45,9 @@ class P2PServer:
 
         # {node_addr: Address: (socket: socket.socket, validations: int)}
         self.neighbors: dict[Address, tuple[socket.socket, int]] = {}
+
+        # {old_squares: new_squares}
+        self.squares_history: dict[json, sudoku_type | None] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("", self.address[1]))
@@ -272,6 +276,8 @@ class P2PServer:
     async def distribute_work(self, sudoku_id: str):
         (grid, jobs, _, _) = self.sudokus[sudoku_id]
 
+        copy_grid = copy.deepcopy(grid.grid)
+
         while not self.is_sudoku_completed(sudoku_id):
             time.sleep(0.5)
             logging.debug(f"Jobs: {jobs}")
@@ -292,6 +298,15 @@ class P2PServer:
                         )
                     continue
 
+                squares = Sudoku.return_square(square, grid.grid)
+                logging.info(f"History: {self.squares_history}, and squares: {squares}")
+                if str(squares) in self.squares_history:
+                    logging.info(f"Square {square} already solved")
+                    logging.info(
+                        f"Replacing square {square} with {self.squares_history[str(squares)]}"
+                    )
+                    solved_square: list[list[int]] = json.loads(str(squares))
+                    Sudoku.replace_square(square, solved_square, grid.grid)
                 if (
                     job[0] == JobStatus.PENDING
                     and len(self.get_addresses_of_free_nodes(sudoku_id)) != 0
@@ -316,6 +331,11 @@ class P2PServer:
                     break
 
         logging.info(f"{sudoku_id} solved: {self.sudokus[sudoku_id][0]}")
+        for square in range(9):
+            squares = Sudoku.return_square(square, copy_grid)
+            self.squares_history[json.dumps(squares)] = Sudoku.return_square(
+                square, grid.grid
+            )
         if not self.sudokus[sudoku_id][0].check():
             return None
 
