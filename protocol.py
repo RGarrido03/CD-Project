@@ -159,6 +159,31 @@ class WorkComplete(Message):
         self.validations = validations
 
 
+class SudokuSolved(Message):
+    """
+    A Sudoku is solved.
+    This message may be sent to all nodes.
+
+    :param id: Sudoku UUID.
+    :type id: str
+    :param sudoku: Sudoku object.
+    :type sudoku: Sudoku
+    :param address: Address of the node that got the HTTP request.
+    :type address: Address
+    """
+
+    def __init__(
+        self,
+        id: str,
+        sudoku: Sudoku,
+        address: Address,
+    ):
+        super().__init__(Command.SUDOKU_SOLVED)
+        self.id = id
+        self.sudoku = sudoku
+        self.address = address
+
+
 class P2PProtocol:
     @classmethod
     def send_msg(

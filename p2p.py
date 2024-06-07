@@ -20,6 +20,7 @@ from protocol import (
     WorkRequest,
     WorkAck,
     WorkComplete,
+    SudokuSolved,
 )
 from sudoku import Sudoku
 
@@ -163,6 +164,16 @@ class P2PServer:
             pass
         elif isinstance(data, WorkComplete):
             self.handle_work_complete(conn, data)
+        elif isinstance(data, SudokuSolved):
+            self.solved += 1
+            logging.info(
+                f"Sudoku {data.id} solved by {self.get_address_from_socket(conn)}"
+            )
+            self.sudokus[data.id] = (
+                data.sudoku,
+                [(JobStatus.COMPLETED, None) for _ in range(0, 9)],
+                self.get_address_from_socket(conn),
+            )
         else:
             print("Unsupported message", data)
 
@@ -278,6 +289,13 @@ class P2PServer:
         logging.info(f"{sudoku_id} solved: {self.sudokus[sudoku_id][0]}")
         if not self.sudokus[sudoku_id][0].check():
             return None
+
+        self.solved += 1
+        for sock in [n[0] for n in self.neighbors.values()]:
+            P2PProtocol.send_msg(
+                sock,
+                SudokuSolved(sudoku_id, self.sudokus[sudoku_id][0], self.address),
+            )
         return self.sudokus[sudoku_id][0].grid
 
     def get_addresses_of_free_nodes(self, sudoku_id: str) -> list[Address]:

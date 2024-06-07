@@ -10,6 +10,7 @@ class Command(IntEnum):
     WORK_REQUEST = 10  # Give work to a node
     WORK_ACK = 11  # Ok, I'll do that
     WORK_COMPLETE = 12  # When a node finishes its job
+    SUDOKU_SOLVED = 13  # When a node solves a sudoku
 
 
 class JobStatus(IntEnum):
