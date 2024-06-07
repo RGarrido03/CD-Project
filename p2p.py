@@ -32,8 +32,8 @@ class P2PServer:
     def __init__(self, port: int, parent: Optional[str], handicap: float):
         self.address = (socket.gethostbyname(socket.gethostname()), port)
         self.handicap = handicap
-        self.solved: int = 0
-        self.validations: int = 0
+        self.solved: int = 0  # Global state across the network
+        self.validations: int = 0  # Node-only state
         self.parent = parent
         logging.basicConfig(encoding="utf-8", level=logging.DEBUG)
 
@@ -41,8 +41,8 @@ class P2PServer:
         # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]
         self.sudokus: dict[str, tuple[Sudoku, jobs_structure, Address]] = {}
 
-        # {node_addr: Address: (socket: socket.socket, solved: int, validations: int)}
-        self.neighbors: dict[Address, tuple[socket.socket, int, int]] = {}
+        # {node_addr: Address: (socket: socket.socket, validations: int)}
+        self.neighbors: dict[Address, tuple[socket.socket, int]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("", self.address[1]))
@@ -59,7 +59,7 @@ class P2PServer:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(addr)
                 self.sel.register(sock, selectors.EVENT_READ, self.read)
-                self.neighbors[addr] = (sock, 0, 0)
+                self.neighbors[addr] = (sock, 0)
                 message = (
                     JoinParent(self.address) if parent else JoinOther(self.address)
                 )
@@ -74,18 +74,14 @@ class P2PServer:
     def get_stats(self) -> dict[str, Any]:
         return {
             "all": {
-                "solved": sum([s[1] for (_, s) in self.neighbors.items()]),
-                "validations": sum([s[2] for (_, s) in self.neighbors.items()]),
+                "solved": self.solved,
+                "validations": sum([v for (_, v) in self.neighbors.values()]),
             },
             "nodes": [
-                {"address": ":".join(str(prop) for prop in k), "validations": v[2]}
+                {"address": ":".join(str(prop) for prop in k), "validations": v[1]}
                 for (k, v) in self.neighbors.items()
             ],
         }
-
-    def add_stats_to_neighbor(self, conn: Address, stats: tuple[int, int]) -> None:
-        (sock, solved, validations) = self.neighbors[conn]
-        self.neighbors[conn] = (sock, solved + stats[0], validations + stats[1])
 
     def get_network(self) -> dict[str, list]:
         all_network = list(self.neighbors.keys()) + [self.address]
@@ -134,7 +130,7 @@ class P2PServer:
         if isinstance(data, JoinParent):
             neighbors = list(self.neighbors.keys())
             message = JoinParentResponse(neighbors)
-            self.neighbors[data.address] = (conn, 0, 0)
+            self.neighbors[data.address] = (conn, 0)
             P2PProtocol.send_msg(conn, message)
             logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinParentResponse):
@@ -142,11 +138,11 @@ class P2PServer:
                 self.connect_to_node(node)
         elif isinstance(data, JoinOther):
             message = JoinOtherResponse(self.solved, self.validations)
-            self.neighbors[data.address] = (conn, 0, 0)
+            self.neighbors[data.address] = (conn, 0)
             P2PProtocol.send_msg(conn, message)
             logging.info("Sent %s to %s", message, data.address)
         elif isinstance(data, JoinOtherResponse):
-            self.neighbors[conn.getsockname()] = (conn, data.solved, data.validations)
+            self.neighbors[conn.getsockname()] = (conn, data.validations)
         elif isinstance(data, KeepAlive):
             # TODO: Is this needed?
             pass
@@ -221,7 +217,7 @@ class P2PServer:
             f"Received complete work {data.job} from {addr} with grid\n{data.sudoku}"
         )
 
-        self.neighbors[addr] = (self.neighbors[addr][0], data.validations, 0)
+        self.neighbors[addr] = (self.neighbors[addr][0], data.validations)
 
         self.update_sudoku_with_new_values(data.id, data.sudoku.grid, data.job)
         self.sudokus[data.id][1][data.job] = (
