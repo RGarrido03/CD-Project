@@ -24,6 +24,7 @@ from protocol import (
     WorkComplete,
     SudokuSolved,
     StoreSudoku,
+    P2PProtocolBadFormat,
 )
 from sudoku import Sudoku
 
@@ -133,7 +134,7 @@ class P2PServer:
     def accept(self, sock: socket.socket):
         conn, _ = sock.accept()
         conn.setblocking(False)
-        conn.settimeout(1)
+        conn.settimeout(3)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
 
     def disconnect_node(self, conn: socket.socket):
@@ -145,7 +146,12 @@ class P2PServer:
         self.neighbors = {k: v for (k, v) in self.neighbors.items() if v[0] != conn}
 
     def read(self, conn: socket.socket):
-        data = P2PProtocol.recv_msg(conn)
+        try:
+            data = P2PProtocol.recv_msg(conn)
+        except P2PProtocolBadFormat:
+            logging.error(f"Bad format from {self.get_address_from_socket(conn)}")
+            self.disconnect_node(conn)
+            return
 
         if data is None:
             self.disconnect_node(conn)
@@ -394,7 +400,7 @@ class P2PServer:
 
     def send_keep_alive_to_neighbors(self):
         while True:
-            time.sleep(2)
+            time.sleep(1)
             for sock in [n[0] for n in self.neighbors.values()]:
                 P2PProtocol.send_msg(sock, KeepAlive())
 
@@ -402,7 +408,7 @@ class P2PServer:
         while True:
             current = time.time()
             for addr, (conn, _, last_beat) in self.neighbors.items():
-                if current - last_beat > 5:
+                if current - last_beat > 3:
                     self.disconnect_node(conn)
 
     def run(self):
