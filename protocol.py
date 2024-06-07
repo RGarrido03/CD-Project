@@ -119,7 +119,7 @@ class WorkRequest(Message):
     Send a work job to a node.
     Probably this will have some changes when we define the algorithm.
 
-    :param id: Job UUID.
+    :param id: Sudoku UUID.
     :type id: str
     :param sudoku: Sudoku object.
     :type sudoku: Sudoku
@@ -161,7 +161,7 @@ class WorkComplete(Message):
     It includes the number of validations, for updating the stats.
     Only validations are needed, the solved number is implicitly +1.
 
-    :param id: Job UUID.
+    :param id: Sudoku UUID.
     :type id: str
     :param sudoku: Sudoku object.
     :type sudoku: Sudoku
