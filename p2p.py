@@ -409,6 +409,9 @@ class P2PServer:
             current = time.time()
             for addr, (conn, _, last_beat) in self.neighbors.items():
                 if current - last_beat > 3:
+                    logging.warning(
+                        f"Node {AddressUtils.address_to_str(addr)} is dead. Disconnecting..."
+                    )
                     self.disconnect_node(conn)
 
     def run(self):
