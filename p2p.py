@@ -285,7 +285,7 @@ class P2PServer:
         copy_grid = copy.deepcopy(grid.grid)
 
         while not self.is_sudoku_completed(sudoku_id):
-            time.sleep(0.5)
+            time.sleep(0.1)
             logging.debug(f"Jobs: {jobs}")
             zeros_per_square = [
                 (i, Sudoku.get_number_of_zeros_in_square(i, grid.grid))
