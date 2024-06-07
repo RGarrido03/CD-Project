@@ -235,6 +235,14 @@ class P2PServer:
 
         self.neighbors[addr] = (self.neighbors[addr][0], data.validations)
 
+        if data.id not in self.sudokus:
+            logging.warning(f"Received work for unknown sudoku {data.id}")
+            self.sudokus[data.id] = (
+                data.sudoku,
+                [(JobStatus.COMPLETED, None) for _ in range(0, 9)],
+                addr,
+            )
+            return
         self.update_sudoku_with_new_values(data.id, data.sudoku.grid, data.job)
         self.sudokus[data.id][1][data.job] = (
             JobStatus.COMPLETED,
