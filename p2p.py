@@ -1,4 +1,4 @@
-import json
+import copy
 import logging
 import selectors
 import socket
@@ -22,6 +22,7 @@ from protocol import (
     WorkAck,
     WorkComplete,
     SudokuSolved,
+    StoreSudoku,
 )
 from sudoku import Sudoku
 
@@ -37,16 +38,12 @@ class P2PServer:
 
         # sudokus        -> {id: (grid: Sudoku, jobs: jobs_structure, address: Address)}
         # jobs_structure -> [(complete: JobStatus, assigned_node: Address)]
-        self.sudokus: dict[str, tuple[Sudoku, jobs_structure, Address]] = {}
+        self.sudokus: dict[
+            str, tuple[Sudoku, jobs_structure, Address, sudoku_type]
+        ] = {}
 
         # {node_addr: Address: (socket: socket.socket, validations: int)}
         self.neighbors: dict[Address, tuple[socket.socket, int]] = {}
-
-        # {inicial_grid: final_grid}
-        self.previosly_solved: dict[str, str] = {}
-        self.original_sudoku = None
-        # {square_number: (old_square, new_square)}
-        # self.original_squares: dict[int, [sudoku_type, sudoku_type]] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("", self.address[1]))
@@ -107,28 +104,26 @@ class P2PServer:
         }
 
     async def solve_sudoku(self, grid: sudoku_type):
-        self.original_sudoku = str(grid)
-        if self.original_sudoku in self.previosly_solved:
-            logging.info("Grid already solved")
-            solved_grid = json.loads(self.previosly_solved[self.original_sudoku])
+        if grid in [s[3] for s in self.sudokus.values()]:
+            logging.info(f"Grid already solved: {grid}")
+            solved_grid = [s[3] for s in self.sudokus.values() if s[3] == grid][0]
             return solved_grid
+
         _id = str(uuid.uuid4())
         sudoku = Sudoku(grid)
         self.sudokus[_id] = (
             sudoku,
             [(JobStatus.PENDING, None) for _ in range(0, 9)],
             self.address,
+            copy.deepcopy(sudoku.grid),
         )
-        # for i in range(0, 9):
-        #     square = sudoku.return_square(i, grid)
-        # logging.info(f"Original squares {self.original_squares}")
-        # if square in self.original_squares[i][0]:
-        #     self.sudokus[_id][1][i] = (JobStatus.COMPLETED, self.address)
-        #     # TODO: replace new
-        #     sudoku.replace_square(i, square, sudoku.grid)
-        #     logging.info(f"Square {i} already solved")
-        # else:
-        #     self.original_squares[i][0] = square
+
+        for sock in [n[0] for n in self.neighbors.values()]:
+            P2PProtocol.send_msg(
+                sock,
+                StoreSudoku(_id, grid, self.address),
+            )
+
         return await self.distribute_work(_id)
 
     def accept(self, sock: socket.socket):
@@ -164,6 +159,13 @@ class P2PServer:
         elif isinstance(data, JoinParentResponse):
             for node in data.nodes:
                 self.connect_to_node(node)
+        elif isinstance(data, StoreSudoku):
+            self.sudokus[data.id] = (
+                Sudoku(data.grid),
+                [(JobStatus.PENDING, None) for _ in range(0, 9)],
+                data.address,
+                data.grid,
+            )
         elif isinstance(data, JoinOther):
             message = JoinOtherResponse(self.solved, self.validations)
             self.neighbors[data.address] = (conn, 0)
@@ -195,6 +197,7 @@ class P2PServer:
                 data.sudoku,
                 [(JobStatus.COMPLETED, None) for _ in range(0, 9)],
                 self.get_address_from_socket(conn),
+                self.sudokus[data.id][3],
             )
         else:
             print("Unsupported message", data)
@@ -211,6 +214,7 @@ class P2PServer:
             data.sudoku,
             data.jobs,
             self.get_address_from_socket(conn),
+            self.sudokus[data.id][3],
         )
         P2PProtocol.send_msg(conn, WorkAck(data.id, data.job))
 
@@ -233,7 +237,6 @@ class P2PServer:
                     self.sudokus[data.id][1][data.job][1],
                 )
                 self.sudokus[data.id][0].grid = changing_grid
-                # self.original_squares[data.job][1] = changing_grid
                 break
 
         logging.info(
@@ -257,14 +260,6 @@ class P2PServer:
 
         self.neighbors[addr] = (self.neighbors[addr][0], data.validations)
 
-        if data.id not in self.sudokus:
-            logging.warning(f"Received work for unknown sudoku {data.id}")
-            self.sudokus[data.id] = (
-                data.sudoku,
-                [(JobStatus.COMPLETED, None) for _ in range(0, 9)],
-                addr,
-            )
-            return
         self.update_sudoku_with_new_values(data.id, data.sudoku.grid, data.job)
         self.sudokus[data.id][1][data.job] = (
             JobStatus.COMPLETED,
@@ -272,7 +267,7 @@ class P2PServer:
         )
 
     async def distribute_work(self, sudoku_id: str):
-        (grid, jobs, _) = self.sudokus[sudoku_id]
+        (grid, jobs, _, _) = self.sudokus[sudoku_id]
 
         while not self.is_sudoku_completed(sudoku_id):
             time.sleep(0.5)
@@ -317,7 +312,6 @@ class P2PServer:
                     )
                     break
 
-        self.previosly_solved[str(self.original_sudoku)] = str(grid.grid)
         logging.info(f"{sudoku_id} solved: {self.sudokus[sudoku_id][0]}")
         if not self.sudokus[sudoku_id][0].check():
             return None

@@ -4,7 +4,7 @@ from socket import socket
 from typing import Optional
 
 from consts import Command
-from custom_types import Address, jobs_structure
+from custom_types import Address, jobs_structure, sudoku_type
 from sudoku import Sudoku
 
 
@@ -29,6 +29,25 @@ class Message:
 
     def __repr__(self):
         return self.__str__()
+
+
+class StoreSudoku(Message):
+    """
+    Store the Sudoku in the node
+
+    :param id: Sudoku UUID.
+    :type id: str
+    :param grid: Sudoku grid.
+    :type grid: sudoku_type
+    :param address: Address of node
+    :type address: Address
+    """
+
+    def __init__(self, id: str, grid: sudoku_type, address: Address):
+        super().__init__(Command.STORE_SUDOKU)
+        self.id = id
+        self.grid = grid
+        self.address = address
 
 
 class JoinParent(Message):

@@ -7,10 +7,11 @@ class Command(IntEnum):
     JOIN_OTHER = 3  # Join each node in the list above
     JOIN_OTHER_RESPONSE = 4  # Response from node, with current stats
     KEEP_ALIVE = 5  # Hey, you there, right?
-    WORK_REQUEST = 10  # Give work to a node
-    WORK_ACK = 11  # Ok, I'll do that
-    WORK_COMPLETE = 12  # When a node finishes its job
-    SUDOKU_SOLVED = 13  # When a node solves a sudoku
+    STORE_SUDOKU = 6
+    WORK_REQUEST = 7  # Give work to a node
+    WORK_ACK = 8  # Ok, I'll do that
+    WORK_COMPLETE = 9  # When a node finishes its job
+    SUDOKU_SOLVED = 10  # When a node solves a sudoku
 
 
 class JobStatus(IntEnum):
