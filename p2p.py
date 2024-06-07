@@ -78,7 +78,9 @@ class P2PServer:
                 time.sleep(wait := wait * 2)
 
     def get_stats(self) -> dict[str, Any]:
-        validations = sum([v for (_, v) in self.neighbors.values()]) + self.validations
+        validations = (
+            sum([v for (_, v, __) in self.neighbors.values()]) + self.validations
+        )
         nodes = [
             {"address": ":".join(str(prop) for prop in k), "validations": v[1]}
             for (k, v) in self.neighbors.items()
