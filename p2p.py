@@ -51,6 +51,7 @@ class P2PServer:
         self.squares_history: dict[json, sudoku_type | None] = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(("", self.address[1]))
         self.socket.setblocking(False)
         self.socket.listen(1000)
