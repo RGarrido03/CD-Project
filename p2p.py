@@ -114,7 +114,7 @@ class P2PServer:
     async def solve_sudoku(self, grid: sudoku_type):
         if grid in [s[3] for s in self.sudokus.values()]:
             logging.info(f"Grid already solved: {grid}")
-            solved_grid = [s[3] for s in self.sudokus.values() if s[3] == grid][0]
+            solved_grid = [s[0].grid for s in self.sudokus.values() if s[3] == grid][0]
             return solved_grid
 
         _id = str(uuid.uuid4())
