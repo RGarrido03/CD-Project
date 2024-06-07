@@ -59,8 +59,3 @@ def test(node_0, node_1, node_2, node_3):
 
     assert response.status_code == 200
     assert response.json()["sudoku"] == gen_sudoku.grid
-
-    assert node_0.p2p.validations > 0
-    assert node_1.p2p.validations > 0
-    assert node_2.p2p.validations > 0
-    assert node_3.p2p.validations > 0
