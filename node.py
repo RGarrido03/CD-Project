@@ -6,9 +6,6 @@ from network import run_http_server
 from p2p import P2PServer
 
 
-# TODO: Cacheeeeeee???????????
-
-
 class Node:
     def __init__(
         self, http_port: int, p2p_port: int, address: Optional[str], handicap: int
