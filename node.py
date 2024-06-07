@@ -37,7 +37,7 @@ def main():
         help="P2P network's address",
         type=str,
     )
-    parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=2000)
+    parser.add_argument("-h", "--handicap", help="Handicap", type=int, default=0)
     args = parser.parse_args()
 
     node = Node(args.port, args.service, args.address, args.handicap)
